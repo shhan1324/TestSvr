@@ -21,12 +21,12 @@ def db_check():
     if not supabase:
         return jsonify({"ok": False, "error": "SUPABASE_URL/SUPABASE_KEY 미설정"}), 500
     try:
-        # 실제 테이블명으로 확인 (테이블 없으면 에러)
         result = supabase.table("health").select("1").limit(1).execute()
         return jsonify({"ok": True, "message": "Supabase 연결 정상"})
     except Exception as e:
         err = str(e).lower()
-        if "relation" in err or "does not exist" in err:
+        # 테이블 없음/relation 오류 → 연결은 됨
+        if any(x in err for x in ["relation", "does not exist", "42p01", "not find"]):
             return jsonify({"ok": True, "message": "Supabase 연결됨 (health 테이블 없음)"})
         return jsonify({"ok": False, "error": str(e)}), 500
 
