@@ -1,10 +1,12 @@
 import os
 from datetime import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client
 
 app = Flask(__name__)
+CORS(app)
 
 # Supabase (환경변수: SUPABASE_URL, SUPABASE_KEY)
 supabase_url = os.environ.get("SUPABASE_URL")
@@ -25,6 +27,21 @@ def _fmt_dt(dt_str):
         return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return str(dt_str)
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/write")
+def write_page():
+    return render_template("write.html")
+
+
+@app.route("/post/<int:post_id>")
+def post_page(post_id):
+    return render_template("post.html", post_id=post_id)
 
 
 @app.route("/api/health")
