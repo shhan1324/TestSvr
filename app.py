@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,12 +21,15 @@ def _post_error(e):
 
 
 def _fmt_dt(dt_str):
-    """created_at to YYYY-MM-DD HH:mm:ss"""
+    """created_at (UTC) -> 한국시간(KST) YYYY-MM-DD HH:mm:ss"""
     if not dt_str:
         return ""
     try:
         dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        kst = dt.astimezone(ZoneInfo("Asia/Seoul"))
+        return kst.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return str(dt_str)
 
