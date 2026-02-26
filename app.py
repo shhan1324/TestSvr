@@ -25,8 +25,11 @@ def db_check():
         return jsonify({"ok": True, "message": "Supabase 연결 정상"})
     except Exception as e:
         err = str(e).lower()
-        # 테이블 없음/relation 오류 → 연결은 됨
-        if any(x in err for x in ["relation", "does not exist", "42p01", "not find"]):
+        # 테이블 없음 오류(RGRST205, relation 등) → 연결은 됨
+        if any(x in err for x in [
+            "relation", "does not exist", "42p01", "not find",
+            "schema cache", "rgrst205", "could not find"
+        ]):
             return jsonify({"ok": True, "message": "Supabase 연결됨 (health 테이블 없음)"})
         return jsonify({"ok": False, "error": str(e)}), 500
 
