@@ -7,7 +7,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__, template_folder=os.path.join(_script_dir, "templates"))
+app = Flask(
+    __name__,
+    template_folder=os.path.join(_script_dir, "templates"),
+    static_folder=os.path.join(_script_dir, "static"),
+    static_url_path="/static",
+)
 CORS(app)
 
 # Supabase (환경변수: SUPABASE_URL, SUPABASE_KEY)
