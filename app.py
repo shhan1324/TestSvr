@@ -50,10 +50,12 @@ def db_check():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
-@app.route("/api/posts", methods=["GET"])
-def list_posts():
+@app.route("/api/posts", methods=["GET", "POST"], strict_slashes=False)
+def posts_collection():
     if not supabase:
         return _post_error("DB 미설정")
+    if request.method == "POST":
+        return _create_post()
     try:
         page = max(1, int(request.args.get("page", 1)))
         limit = max(1, min(50, int(request.args.get("limit", 15))))
@@ -79,8 +81,7 @@ def list_posts():
         return _post_error(e)
 
 
-@app.route("/api/posts", methods=["POST"])
-def create_post():
+def _create_post():
     if not supabase:
         return _post_error("DB 미설정")
     data = request.get_json() or {}
@@ -104,10 +105,14 @@ def create_post():
         return _post_error(e)
 
 
-@app.route("/api/posts/<int:post_id>", methods=["GET"])
-def get_post(post_id):
+@app.route("/api/posts/<int:post_id>", methods=["GET", "PUT", "DELETE"], strict_slashes=False)
+def post_by_id(post_id):
     if not supabase:
         return _post_error("DB 미설정")
+    if request.method == "PUT":
+        return _update_post(post_id)
+    if request.method == "DELETE":
+        return _delete_post(post_id)
     try:
         res = supabase.table("posts").select("id,author,title,content,created_at").eq(
             "id", post_id
@@ -135,8 +140,7 @@ def _get_password_hash(post_id):
     return rows[0].get("password_hash")
 
 
-@app.route("/api/posts/<int:post_id>", methods=["PUT"])
-def update_post(post_id):
+def _update_post(post_id):
     if not supabase:
         return _post_error("DB 미설정")
     data = request.get_json() or {}
@@ -160,8 +164,7 @@ def update_post(post_id):
         return _post_error(e)
 
 
-@app.route("/api/posts/<int:post_id>", methods=["DELETE"])
-def delete_post(post_id):
+def _delete_post(post_id):
     if not supabase:
         return _post_error("DB 미설정")
     data = request.get_json() or {}
