@@ -1,5 +1,7 @@
 import os
-from flask import Flask, jsonify
+from datetime import datetime
+from flask import Flask, jsonify, request
+from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client
 
 app = Flask(__name__)
@@ -8,6 +10,21 @@ app = Flask(__name__)
 supabase_url = os.environ.get("SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_KEY")
 supabase = create_client(supabase_url, supabase_key) if supabase_url and supabase_key else None
+
+
+def _post_error(e):
+    return jsonify({"error": str(e) or "오류가 발생했습니다."}), 500
+
+
+def _fmt_dt(dt_str):
+    """created_at to YYYY-MM-DD HH:mm:ss"""
+    if not dt_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return str(dt_str)
 
 
 @app.route("/api/health")
@@ -25,13 +42,140 @@ def db_check():
         return jsonify({"ok": True, "message": "Supabase 연결 정상"})
     except Exception as e:
         err = str(e).lower()
-        # 테이블 없음 오류(RGRST205, relation 등) → 연결은 됨
         if any(x in err for x in [
             "relation", "does not exist", "42p01", "not find",
             "schema cache", "rgrst205", "could not find"
         ]):
             return jsonify({"ok": True, "message": "Supabase 연결됨 (health 테이블 없음)"})
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/posts", methods=["GET"])
+def list_posts():
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+        limit = max(1, min(50, int(request.args.get("limit", 15))))
+        offset = (page - 1) * limit
+
+        res = supabase.table("posts").select("id,author,title,created_at", count="exact").order(
+            "created_at", desc=True
+        ).range(offset, offset + limit - 1).execute()
+
+        total = getattr(res, "count", None) or len(res.data or [])
+
+        posts = []
+        for i, row in enumerate(res.data or []):
+            posts.append({
+                "id": row["id"],
+                "number": total - offset - i,
+                "author": row.get("author", ""),
+                "title": row.get("title", ""),
+                "created_at": _fmt_dt(row.get("created_at")),
+            })
+        return jsonify({"posts": posts, "total": total})
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/posts", methods=["POST"])
+def create_post():
+    if not supabase:
+        return _post_error("DB 미설정")
+    data = request.get_json() or {}
+    author = (data.get("author") or "").strip()
+    password = data.get("password") or ""
+    title = (data.get("title") or "").strip()
+    content = (data.get("content") or "").strip()
+    if not author or not password or not title:
+        return jsonify({"error": "글쓴이, 비밀번호, 제목은 필수입니다."}), 400
+    password_hash = generate_password_hash(password)
+    try:
+        ins = supabase.table("posts").insert({
+            "author": author,
+            "password_hash": password_hash,
+            "title": title,
+            "content": content,
+        }).execute()
+        row = (ins.data or [{}])[0]
+        return jsonify({"id": row.get("id"), "created_at": _fmt_dt(row.get("created_at"))}), 201
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/posts/<int:post_id>", methods=["GET"])
+def get_post(post_id):
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        res = supabase.table("posts").select("id,author,title,content,created_at").eq(
+            "id", post_id
+        ).execute()
+        rows = res.data or []
+        if not rows:
+            return jsonify({"error": "Not found"}), 404
+        row = rows[0]
+        return jsonify({
+            "id": row["id"],
+            "author": row.get("author", ""),
+            "title": row.get("title", ""),
+            "content": row.get("content", ""),
+            "created_at": _fmt_dt(row.get("created_at")),
+        })
+    except Exception as e:
+        return _post_error(e)
+
+
+def _get_password_hash(post_id):
+    res = supabase.table("posts").select("password_hash").eq("id", post_id).execute()
+    rows = res.data or []
+    if not rows:
+        return None
+    return rows[0].get("password_hash")
+
+
+@app.route("/api/posts/<int:post_id>", methods=["PUT"])
+def update_post(post_id):
+    if not supabase:
+        return _post_error("DB 미설정")
+    data = request.get_json() or {}
+    password = data.get("password") or ""
+    title = (data.get("title") or "").strip()
+    content = (data.get("content") or "").strip()
+    if not title:
+        return jsonify({"error": "제목은 필수입니다."}), 400
+    try:
+        stored = _get_password_hash(post_id)
+        if not stored:
+            return jsonify({"error": "Not found"}), 404
+        if not check_password_hash(stored, password):
+            return jsonify({"error": "비밀번호가 일치하지 않습니다."}), 403
+        supabase.table("posts").update({
+            "title": title,
+            "content": content,
+        }).eq("id", post_id).execute()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/posts/<int:post_id>", methods=["DELETE"])
+def delete_post(post_id):
+    if not supabase:
+        return _post_error("DB 미설정")
+    data = request.get_json() or {}
+    password = data.get("password") or ""
+    try:
+        stored = _get_password_hash(post_id)
+        if not stored:
+            return jsonify({"error": "Not found"}), 404
+        if not check_password_hash(stored, password):
+            return jsonify({"error": "비밀번호가 일치하지 않습니다."}), 403
+        supabase.table("posts").delete().eq("id", post_id).execute()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return _post_error(e)
 
 
 if __name__ == "__main__":
