@@ -5,7 +5,8 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client
 
-app = Flask(__name__)
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, template_folder=os.path.join(_script_dir, "templates"))
 CORS(app)
 
 # Supabase (환경변수: SUPABASE_URL, SUPABASE_KEY)
@@ -29,17 +30,18 @@ def _fmt_dt(dt_str):
         return str(dt_str)
 
 
-@app.route("/")
+@app.route("/", strict_slashes=False)
+@app.route("/index.html", strict_slashes=False)
 def index():
     return render_template("index.html")
 
 
-@app.route("/write")
+@app.route("/write", strict_slashes=False)
 def write_page():
     return render_template("write.html")
 
 
-@app.route("/post/<int:post_id>")
+@app.route("/post/<int:post_id>", strict_slashes=False)
 def post_page(post_id):
     return render_template("post.html", post_id=post_id)
 
