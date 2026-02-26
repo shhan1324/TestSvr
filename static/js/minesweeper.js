@@ -17,6 +17,14 @@ const DIRS = [
   [1, -1],  [1, 0],  [1, 1]
 ];
 
+const LONG_PRESS_MS = 500;
+
+let touchState = {
+  startTime: 0,
+  targetCell: null,
+  justHandled: null
+};
+
 let state = {
   level: 1,
   rows: 10,
@@ -75,11 +83,46 @@ function renderCell(r, c) {
   cell.className = "cell closed";
   cell.dataset.row = r;
   cell.dataset.col = c;
-  cell.addEventListener("click", () => onCellClick(r, c));
+
+  cell.addEventListener("touchstart", () => {
+    touchState.startTime = Date.now();
+    touchState.targetCell = { r, c };
+  }, { passive: true });
+
+  cell.addEventListener("touchend", (e) => {
+    if (touchState.targetCell && touchState.targetCell.r === r && touchState.targetCell.c === c) {
+      const duration = Date.now() - touchState.startTime;
+      if (duration >= LONG_PRESS_MS) {
+        e.preventDefault();
+        toggleFlag(r, c);
+      } else {
+        onCellClick(r, c);
+      }
+      touchState.justHandled = { r, c, time: Date.now() };
+      touchState.targetCell = null;
+      setTimeout(() => { touchState.justHandled = null; }, 400);
+    }
+  }, { passive: false });
+
+  cell.addEventListener("touchcancel", () => {
+    touchState.targetCell = null;
+  });
+
+  cell.addEventListener("click", (e) => {
+    if (touchState.justHandled && touchState.justHandled.r === r && touchState.justHandled.c === c &&
+        (Date.now() - touchState.justHandled.time) < 400) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onCellClick(r, c);
+  });
+
   cell.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     toggleFlag(r, c);
   });
+
   return cell;
 }
 
