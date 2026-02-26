@@ -50,6 +50,11 @@ def post_page(post_id):
     return render_template("post.html", post_id=post_id)
 
 
+@app.route("/minesweeper", strict_slashes=False)
+def minesweeper():
+    return render_template("minesweeper.html")
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"message": "정상입니다"})
