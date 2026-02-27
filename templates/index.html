@@ -1,43 +1,34 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <meta name="theme-color" content="#0d6efd">
-  <title>익명 게시판</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/board.css') }}">
-</head>
-<body>
-  <div class="container py-4">
-    <h1 class="mb-4">익명 게시판</h1>
+{% extends "base.html" %}
+{% block title %}커뮤니티{% endblock %}
+{% block content %}
+  <h1 class="mb-4">커뮤니티</h1>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <span id="pageInfo" class="text-muted"></span>
-      <div class="d-flex gap-2">
-        <a href="/minesweeper" class="btn btn-outline-secondary">지뢰찾기</a>
-        <a href="/write" class="btn btn-primary">글쓰기</a>
-      </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <span id="pageInfo" class="text-muted"></span>
+    <div class="d-flex gap-2">
+      <a href="/minesweeper" class="btn btn-outline-secondary">지뢰찾기</a>
+      <a href="/write" class="btn btn-primary">글쓰기</a>
     </div>
-
-    <div class="table-wrap">
-      <table class="table table-striped table-hover">
-        <thead>
-          <tr>
-            <th>번호</th>
-            <th>제목</th>
-            <th>작성자</th>
-            <th>작성일자</th>
-          </tr>
-        </thead>
-        <tbody id="postsBody"></tbody>
-      </table>
-    </div>
-
-    <div id="pageIndicator" class="d-flex justify-content-center gap-1 flex-wrap my-3"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <div class="table-wrap">
+    <table class="table table-striped table-hover">
+      <thead>
+        <tr>
+          <th>번호</th>
+          <th>제목</th>
+          <th>작성자</th>
+          <th>작성일자</th>
+        </tr>
+      </thead>
+      <tbody id="postsBody"></tbody>
+    </table>
+  </div>
+
+  <div id="pageIndicator" class="d-flex justify-content-center gap-1 flex-wrap my-3"></div>
+{% endblock %}
+
+{% block extra_js %}
   <script>
     const LIMIT = 15;
     let currentPage = 1;
@@ -52,7 +43,7 @@
 
     function loadPage(page) {
       currentPage = page;
-      fetch("/api/posts?page=" + page + "&limit=" + LIMIT)
+      fetch("/api/posts?page=" + page + "&limit=" + LIMIT, { credentials: "include" })
         .then(r => r.json())
         .then(data => {
           totalCount = data.total || 0;
@@ -80,5 +71,4 @@
 
     loadPage(1);
   </script>
-</body>
-</html>
+{% endblock %}
