@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}회원가입 - 커뮤니티{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-4">회원가입</h1>
+
+  <form id="registerForm" class="mw-400">
+    <div class="mb-3">
+      <label class="form-label">아이디</label>
+      <input type="text" class="form-control" name="username" required autocomplete="username">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">비밀번호</label>
+      <input type="password" class="form-control" name="password" required autocomplete="new-password">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">비밀번호 확인</label>
+      <input type="password" class="form-control" name="password_confirm" required autocomplete="new-password">
+    </div>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">가입하기</button>
+      <a href="/login" class="btn btn-outline-secondary">로그인</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.getElementById("registerForm").onsubmit = function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        username: fd.get("username"),
+        password: fd.get("password"),
+        password_confirm: fd.get("password_confirm")
+      })
+    })
+      .then(r => r.json().then(j => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        if (ok) {
+          alert("가입 완료. 로그인해 주세요.");
+          location.href = "/login";
+        } else {
+          alert("오류: " + (json.error || "알 수 없음"));
+          btn.disabled = false;
+        }
+      })
+      .catch(err => { alert("오류: " + err.message); btn.disabled = false; });
+  };
+</script>
+{% endblock %}
