@@ -291,15 +291,10 @@ def api_minesweeper_record():
         return _post_error("DB 미설정")
     try:
         user_id = session.get("user_id")
+        payload = {"username": username, "level": level}
         if user_id and user_id > 0:
-            pass
-        else:
-            user_id = None
-        supabase.table("minesweeper_records").insert({
-            "user_id": user_id,
-            "username": username,
-            "level": level,
-        }).execute()
+            payload["user_id"] = user_id
+        supabase.table("minesweeper_records").insert(payload).execute()
         return jsonify({"ok": True})
     except Exception as e:
         return _post_error(e)
