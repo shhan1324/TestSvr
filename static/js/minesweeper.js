@@ -29,7 +29,7 @@ let state = {
   level: 1,
   rows: 10,
   cols: 10,
-  bombCount: 10,
+  bombCount: 3,
   grid: [],           // 2D: true=폭탄
   revealed: [],       // 2D: true=열림
   flagged: [],        // 2D: true=플래그
@@ -219,8 +219,47 @@ function checkWin() {
     state.gameOver = true;
     state.won = true;
     revealAllBombs();
+    saveMinesweeperRecord(state.level);
+    if (typeof loadRanking === "function") loadRanking();
     alert("축하합니다! 승리했습니다!");
   }
+}
+
+function saveMinesweeperRecord(level) {
+  fetch("/api/minesweeper/record", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ level: level })
+  }).catch(function() {});
+}
+
+function loadRanking() {
+  const tbody = document.getElementById("rankingBody");
+  if (!tbody) return;
+  fetch("/api/minesweeper/ranking", { credentials: "include" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      const list = data.ranking || [];
+      if (list.length === 0) {
+        tbody.innerHTML = "<tr><td colspan=\"4\" class=\"text-muted text-center\">기록이 없습니다.</td></tr>";
+      } else {
+        tbody.innerHTML = list.map(function(r) {
+          return "<tr><td>" + r.rank + "</td><td>" + r.level + "단계</td><td>" +
+            escapeHtmlRank(r.username) + "</td><td>" + (r.success_date || "") + "</td></tr>";
+        }).join("");
+      }
+    })
+    .catch(function() {
+      tbody.innerHTML = "<tr><td colspan=\"4\" class=\"text-muted text-center\">로드 실패</td></tr>";
+    });
+}
+
+function escapeHtmlRank(s) {
+  if (s == null) return "";
+  var div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
 }
 
 function updateBombCountDisplay() {
@@ -275,16 +314,18 @@ function startGame(level) {
   buildBoard();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", function() {
   startGame(1);
+  loadRanking();
 
-  document.querySelectorAll(".level-buttons .btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+  document.querySelectorAll(".level-buttons .btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
       startGame(parseInt(btn.dataset.level, 10));
     });
   });
 
-  document.getElementById("restartBtn")?.addEventListener("click", () => {
+  var restartBtn = document.getElementById("restartBtn");
+  if (restartBtn) restartBtn.addEventListener("click", function() {
     startGame(state.level);
   });
 });
