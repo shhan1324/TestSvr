@@ -17,11 +17,12 @@ const DIRS = [
   [1, -1],  [1, 0],  [1, 1]
 ];
 
-const LONG_PRESS_MS = 500;
+const LONG_PRESS_MS = 400;
 
 let touchState = {
-  startTime: 0,
+  timerId: null,
   targetCell: null,
+  longPressFired: false,
   justHandled: null
 };
 
@@ -84,33 +85,59 @@ function renderCell(r, c) {
   cell.dataset.row = r;
   cell.dataset.col = c;
 
-  cell.addEventListener("touchstart", () => {
-    touchState.startTime = Date.now();
-    touchState.targetCell = { r, c };
+  function clearTouchTimer() {
+    if (touchState.timerId) {
+      clearTimeout(touchState.timerId);
+      touchState.timerId = null;
+    }
+  }
+
+  cell.addEventListener("touchstart", function(e) {
+    clearTouchTimer();
+    touchState.longPressFired = false;
+    touchState.targetCell = { r: r, c: c };
+    touchState.timerId = setTimeout(function() {
+      touchState.timerId = null;
+      touchState.longPressFired = true;
+      toggleFlag(r, c);
+    }, LONG_PRESS_MS);
   }, { passive: true });
 
-  cell.addEventListener("touchend", (e) => {
-    if (touchState.targetCell && touchState.targetCell.r === r && touchState.targetCell.c === c) {
-      const duration = Date.now() - touchState.startTime;
-      if (duration >= LONG_PRESS_MS) {
-        e.preventDefault();
-        toggleFlag(r, c);
-      } else {
-        onCellClick(r, c);
-      }
-      touchState.justHandled = { r, c, time: Date.now() };
+  cell.addEventListener("touchmove", function() {
+    clearTouchTimer();
+    touchState.targetCell = null;
+  }, { passive: true });
+
+  cell.addEventListener("touchend", function(e) {
+    clearTouchTimer();
+    if (touchState.longPressFired) {
+      touchState.longPressFired = false;
       touchState.targetCell = null;
-      setTimeout(() => { touchState.justHandled = null; }, 400);
+      touchState.justHandled = { r: r, c: c, time: Date.now() };
+      e.preventDefault();
+      e.stopPropagation();
+      setTimeout(function() { touchState.justHandled = null; }, 500);
+      return;
+    }
+    if (touchState.targetCell && touchState.targetCell.r === r && touchState.targetCell.c === c) {
+      touchState.targetCell = null;
+      onCellClick(r, c);
+      touchState.justHandled = { r: r, c: c, time: Date.now() };
+      e.preventDefault();
+      e.stopPropagation();
+      setTimeout(function() { touchState.justHandled = null; }, 500);
     }
   }, { passive: false });
 
-  cell.addEventListener("touchcancel", () => {
+  cell.addEventListener("touchcancel", function() {
+    clearTouchTimer();
     touchState.targetCell = null;
-  });
+    touchState.longPressFired = false;
+  }, { passive: true });
 
-  cell.addEventListener("click", (e) => {
+  cell.addEventListener("click", function(e) {
     if (touchState.justHandled && touchState.justHandled.r === r && touchState.justHandled.c === c &&
-        (Date.now() - touchState.justHandled.time) < 400) {
+        (Date.now() - touchState.justHandled.time) < 600) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -118,8 +145,12 @@ function renderCell(r, c) {
     onCellClick(r, c);
   });
 
-  cell.addEventListener("contextmenu", (e) => {
+  cell.addEventListener("contextmenu", function(e) {
     e.preventDefault();
+    if (touchState.justHandled && touchState.justHandled.r === r && touchState.justHandled.c === c &&
+        (Date.now() - touchState.justHandled.time) < 500) {
+      return;
+    }
     toggleFlag(r, c);
   });
 
