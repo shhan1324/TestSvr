@@ -219,34 +219,48 @@ function checkWin() {
     state.gameOver = true;
     state.won = true;
     revealAllBombs();
-    saveMinesweeperRecord(state.level);
-    if (typeof loadRanking === "function") loadRanking();
+    saveMinesweeperRecord(state.level, function() {
+      if (typeof loadRanking === "function") loadRanking();
+    });
     alert("축하합니다! 승리했습니다!");
   }
 }
 
-function saveMinesweeperRecord(level) {
+function saveMinesweeperRecord(level, onDone) {
   fetch("/api/minesweeper/record", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ level: level })
-  }).catch(function() {});
+  })
+    .then(function() { if (onDone) onDone(); })
+    .catch(function() { if (onDone) onDone(); });
 }
 
 function loadRanking() {
   const tbody = document.getElementById("rankingBody");
   if (!tbody) return;
   fetch("/api/minesweeper/ranking", { credentials: "include" })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      return r.text().then(function(t) {
+        try {
+          return t ? JSON.parse(t) : {};
+        } catch (_) {
+          return {};
+        }
+      });
+    })
     .then(function(data) {
-      const list = data.ranking || [];
+      const list = Array.isArray(data.ranking) ? data.ranking : [];
       if (list.length === 0) {
         tbody.innerHTML = "<tr><td colspan=\"4\" class=\"text-muted text-center\">기록이 없습니다.</td></tr>";
       } else {
         tbody.innerHTML = list.map(function(r) {
-          return "<tr><td>" + r.rank + "</td><td>" + r.level + "단계</td><td>" +
-            escapeHtmlRank(r.username) + "</td><td>" + (r.success_date || "") + "</td></tr>";
+          var rank = Number(r.rank) || 0;
+          var level = Number(r.level) || 1;
+          var username = escapeHtmlRank(r.username != null ? String(r.username) : "");
+          var date = r.success_date != null ? String(r.success_date) : "";
+          return "<tr><td>" + rank + "</td><td>" + level + "단계</td><td>" + username + "</td><td>" + date + "</td></tr>";
         }).join("");
       }
     })
@@ -256,9 +270,9 @@ function loadRanking() {
 }
 
 function escapeHtmlRank(s) {
-  if (s == null) return "";
+  if (s == null || s === undefined) return "";
   var div = document.createElement("div");
-  div.textContent = s;
+  div.textContent = String(s);
   return div.innerHTML;
 }
 
