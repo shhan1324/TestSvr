@@ -30,48 +30,68 @@
 </div>
 
 <script>
-  const toastEl = document.getElementById("toastError");
-  const toastBody = document.getElementById("toastErrorBody");
-  const toast = toastEl ? new bootstrap.Toast(toastEl) : null;
+  (function() {
+    let toast = null;
+    try {
+      const el = document.getElementById("toastError");
+      if (el && typeof bootstrap !== "undefined") toast = new bootstrap.Toast(el);
+    } catch (_) {}
 
-  function showErrorToast(message) {
-    if (toast && toastBody) {
-      toastBody.textContent = message;
-      toast.show();
+    function showError(msg) {
+      const body = document.getElementById("toastErrorBody");
+      if (toast && body) {
+        body.textContent = msg;
+        toast.show();
+      } else {
+        alert(msg);
+      }
     }
-  }
 
-  if (new URLSearchParams(location.search).get("blacklist") === "1") {
-    showErrorToast("블랙리스트로 지정되어 로그인할 수 없습니다.");
-  }
+    if (new URLSearchParams(location.search).get("blacklist") === "1") {
+      showError("블랙리스트로 지정되어 로그인할 수 없습니다.");
+    }
 
-  document.getElementById("loginForm").onsubmit = function(e) {
-    e.preventDefault();
-    const fd = new FormData(this);
-    const btn = this.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        username: fd.get("username"),
-        password: fd.get("password")
-      })
-    })
-      .then(r => r.json().then(j => ({ ok: r.ok, json: j })))
-      .then(({ ok, json }) => {
-        if (ok) {
-          location.href = "/";
-        } else {
-          showErrorToast(json.error || "로그인에 실패했습니다.");
-          btn.disabled = false;
-        }
-      })
-      .catch(err => {
-        showErrorToast("오류: " + (err.message || "알 수 없음"));
-        btn.disabled = false;
+    const form = document.getElementById("loginForm");
+    if (form) {
+      form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const fd = new FormData(this);
+        const btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.textContent = "로그인 중...";
+        fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") })
+        })
+          .then(function(r) {
+            return r.text().then(function(t) {
+              try {
+                return { ok: r.ok, json: t ? JSON.parse(t) : {} };
+              } catch (_) {
+                return { ok: false, json: { error: "서버 오류" } };
+              }
+            });
+          })
+          .then(function(res) {
+            if (res.ok) {
+              window.location.href = "/";
+            } else {
+              showError(res.json.error || "로그인에 실패했습니다.");
+              btn.disabled = false;
+              btn.textContent = "로그인";
+            }
+          })
+          .catch(function(err) {
+            showError("오류: " + (err.message || "알 수 없음"));
+            btn.disabled = false;
+            btn.textContent = "로그인";
+          });
+        return false;
       });
-  };
+    }
+  })();
 </script>
 {% endblock %}
