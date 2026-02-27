@@ -17,7 +17,7 @@ const DIRS = [
   [1, -1],  [1, 0],  [1, 1]
 ];
 
-/** 0.4초 미만 터치=열기, 0.4초 이상=선택 팝업(깃발달기/열기) */
+/** 0.4초 이내 터치=열기, 0.4초 이상 롱프레스=깃발 설치/제거(토글) */
 const LONG_PRESS_MS = 400;
 
 let touchState = {
@@ -114,7 +114,7 @@ function renderCell(r, c) {
       touchState.longPressFired = true;
       touchState.longPressHandledForCurrentTouch = true;
       requestAnimationFrame(function() {
-        showLongPressPopup(r, c);
+        toggleFlag(r, c);  /* 롱프레스: 깃발 설치 또는 제거(토글), DOM 업데이트 지연으로 touchcancel 유발 방지 */
       });
     }, LONG_PRESS_MS);
   }, { passive: false });
@@ -263,21 +263,6 @@ function toggleFlag(row, col) {
   updateBombCountDisplay();
 }
 
-let longPressPendingCell = null;
-
-function showLongPressPopup(row, col) {
-  if (state.gameOver || state.revealed[row][col]) return;
-  longPressPendingCell = { r: row, c: col };
-  const popup = document.getElementById("longPressPopup");
-  if (popup) popup.style.display = "flex";
-}
-
-function hideLongPressPopup() {
-  longPressPendingCell = null;
-  const popup = document.getElementById("longPressPopup");
-  if (popup) popup.style.display = "none";
-}
-
 function onCellClick(row, col) {
   if (state.gameOver) return;
   reveal(row, col);
@@ -408,31 +393,6 @@ function startGame(level) {
 document.addEventListener("DOMContentLoaded", function() {
   startGame(1);
   loadRanking();
-
-  var popup = document.getElementById("longPressPopup");
-  var popupFlagBtn = document.getElementById("popupFlagBtn");
-  var popupOpenBtn = document.getElementById("popupOpenBtn");
-  if (popupFlagBtn) {
-    popupFlagBtn.addEventListener("click", function() {
-      if (longPressPendingCell) {
-        toggleFlag(longPressPendingCell.r, longPressPendingCell.c);
-      }
-      hideLongPressPopup();
-    });
-  }
-  if (popupOpenBtn) {
-    popupOpenBtn.addEventListener("click", function() {
-      if (longPressPendingCell) {
-        onCellClick(longPressPendingCell.r, longPressPendingCell.c);
-      }
-      hideLongPressPopup();
-    });
-  }
-  if (popup) {
-    popup.addEventListener("click", function(e) {
-      if (e.target === popup) hideLongPressPopup();
-    });
-  }
 
   document.querySelectorAll(".level-buttons .btn").forEach(function(btn) {
     btn.addEventListener("click", function() {
