@@ -108,28 +108,3 @@
 .cell.num-6 { color: #008080; }
 .cell.num-7 { color: #000000; }
 .cell.num-8 { color: #808080; }
-
-/* 롱프레스 선택 팝업 */
-.minesweeper-longpress-popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1050;
-}
-.minesweeper-longpress-buttons {
-  display: flex;
-  gap: 0.75rem;
-  background: #fff;
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-.minesweeper-longpress-buttons .btn {
-  min-width: 100px;
-}
