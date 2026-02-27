@@ -62,6 +62,27 @@ def _admin_required(f):
     return inner
 
 
+# 로그인 없이 접근 가능한 경로 (전체 사이트 로그인 필수)
+_LOGIN_EXEMPT = frozenset([
+    "/login", "/register", "/logout",
+    "/api/auth/login", "/api/auth/register", "/api/auth/logout",
+    "/api/health",
+])
+
+
+@app.before_request
+def _require_login():
+    if request.path in _LOGIN_EXEMPT:
+        return None
+    if request.path.startswith("/static/"):
+        return None
+    if session.get("username"):
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "로그인이 필요합니다.", "redirect": "/login"}), 401
+    return redirect(url_for("login_page"))
+
+
 @app.route("/", strict_slashes=False)
 @app.route("/index.html", strict_slashes=False)
 def index():
@@ -85,11 +106,15 @@ def minesweeper():
 
 @app.route("/register", strict_slashes=False)
 def register_page():
+    if session.get("username"):
+        return redirect(url_for("index"))
     return render_template("register.html")
 
 
 @app.route("/login", strict_slashes=False)
 def login_page():
+    if session.get("username"):
+        return redirect(url_for("index"))
     return render_template("login.html")
 
 
