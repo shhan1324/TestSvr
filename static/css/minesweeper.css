@@ -70,6 +70,8 @@
   font-weight: bold;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
   background: #c0c0c0;
   border: 2px outset #e0e0e0;
   box-sizing: border-box;
