@@ -14,10 +14,10 @@
     </div>
     <div class="status-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
       <span id="bombCount" class="badge bg-secondary">폭탄: 0</span>
-      <span class="text-muted small d-none d-md-inline">우클릭: 깃발 / 길게 누르기: 선택 팝업</span>
+      <span class="text-muted small d-none d-md-inline">우클릭/길게 누르기: 깃발 설치·제거</span>
       <button type="button" id="restartBtn" class="btn btn-warning">다시 시작</button>
     </div>
-    <p class="text-muted small d-md-none mb-0">탭(0.4초 이내): 열기 / 길게 누르기(0.4초 이상): 선택 팝업</p>
+    <p class="text-muted small d-md-none mb-0">탭(0.4초 이내): 열기 / 길게 누르기: 깃발 설치·제거</p>
   </div>
 
   <div class="minesweeper-ranking mb-3">
@@ -39,13 +39,6 @@
 
   <div class="minesweeper-wrapper">
     <div id="minesweeper-board" class="minesweeper-board"></div>
-  </div>
-
-  <div id="longPressPopup" class="minesweeper-longpress-popup" style="display:none;">
-    <div class="minesweeper-longpress-buttons">
-      <button type="button" id="popupFlagBtn" class="btn btn-warning">깃발달기(해제)</button>
-      <button type="button" id="popupOpenBtn" class="btn btn-primary">열기</button>
-    </div>
   </div>
 
   <div class="mt-3">
