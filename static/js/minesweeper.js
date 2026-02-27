@@ -22,6 +22,7 @@ const LONG_PRESS_MS = 400;
 
 let touchState = {
   timerId: null,
+  resetHandledTimerId: null,  /* touchcancel 후 지연 초기화용 */
   targetCell: null,
   touchStartTime: 0,
   longPressFired: false,
@@ -96,7 +97,12 @@ function renderCell(r, c) {
   }
 
   cell.addEventListener("touchstart", function(e) {
+    if (touchState.resetHandledTimerId) {
+      clearTimeout(touchState.resetHandledTimerId);
+      touchState.resetHandledTimerId = null;
+    }
     if (touchState.longPressHandledForCurrentTouch) {
+      e.preventDefault();
       return;  /* 롱프레스 이미 처리됨, 손 뗄 때까지 새 타이머 시작 안 함 */
     }
     clearTouchTimer();
@@ -107,9 +113,11 @@ function renderCell(r, c) {
       touchState.timerId = null;
       touchState.longPressFired = true;
       touchState.longPressHandledForCurrentTouch = true;
-      toggleFlag(r, c);  /* 롱프레스: 깃발 설치 또는 제거(토글) */
+      requestAnimationFrame(function() {
+        toggleFlag(r, c);  /* 롱프레스: 깃발 설치 또는 제거(토글), DOM 업데이트 지연으로 touchcancel 유발 방지 */
+      });
     }, LONG_PRESS_MS);
-  }, { passive: true });
+  }, { passive: false });
 
   cell.addEventListener("touchmove", function() {
     clearTouchTimer();
@@ -118,6 +126,10 @@ function renderCell(r, c) {
 
   cell.addEventListener("touchend", function(e) {
     clearTouchTimer();
+    if (touchState.resetHandledTimerId) {
+      clearTimeout(touchState.resetHandledTimerId);
+      touchState.resetHandledTimerId = null;
+    }
     touchState.longPressHandledForCurrentTouch = false;  /* 손 뗌 = 다음 터치에서 새로 시작 */
     if (touchState.longPressFired) {
       touchState.longPressFired = false;
@@ -144,9 +156,14 @@ function renderCell(r, c) {
 
   cell.addEventListener("touchcancel", function() {
     clearTouchTimer();
-    touchState.longPressHandledForCurrentTouch = false;
     touchState.targetCell = null;
     touchState.longPressFired = false;
+    /* DOM 업데이트로 인한 touchcancel일 수 있음(손 안 뗀 상태). 즉시 초기화 시 같은 터치의 touchstart가 오면 새 타이머가 걸려 깃발 해제됨. 150ms 지연 후 초기화. 그 전에 touchstart 오면 취소 */
+    if (touchState.resetHandledTimerId) clearTimeout(touchState.resetHandledTimerId);
+    touchState.resetHandledTimerId = setTimeout(function() {
+      touchState.resetHandledTimerId = null;
+      touchState.longPressHandledForCurrentTouch = false;
+    }, 500);
   }, { passive: true });
 
   cell.addEventListener("click", function(e) {
