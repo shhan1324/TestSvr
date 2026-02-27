@@ -1,14 +1,14 @@
 /**
  * 지뢰찾기 게임 로직
- * 1단계: 10x10, 폭탄 3개
- * 2단계: 20x20, 폭탄 5개
- * 3단계: 30x30, 폭탄 10개
+ * 1단계: 10x10, 폭탄 10개
+ * 2단계: 20x20, 폭탄 20개
+ * 3단계: 30x30, 폭탄 30개
  */
 
 const LEVELS = {
-  1: { rows: 10, cols: 10, bombs: 3 },
-  2: { rows: 20, cols: 20, bombs: 5 },
-  3: { rows: 30, cols: 30, bombs: 10 }
+  1: { rows: 10, cols: 10, bombs: 10 },
+  2: { rows: 20, cols: 20, bombs: 20 },
+  3: { rows: 30, cols: 30, bombs: 30 }
 };
 
 const DIRS = [
@@ -29,7 +29,7 @@ let state = {
   level: 1,
   rows: 10,
   cols: 10,
-  bombCount: 3,
+  bombCount: 10,
   grid: [],           // 2D: true=폭탄
   revealed: [],       // 2D: true=열림
   flagged: [],        // 2D: true=플래그
@@ -207,6 +207,7 @@ function onCellClick(row, col) {
 }
 
 function checkWin() {
+  if (state.gameOver) return;
   const safeCount = state.rows * state.cols - state.bombCount;
   let revealedCount = 0;
   for (let r = 0; r < state.rows; r++) {
