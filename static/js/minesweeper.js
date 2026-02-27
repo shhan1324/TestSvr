@@ -25,6 +25,7 @@ let touchState = {
   targetCell: null,
   touchStartTime: 0,
   longPressFired: false,
+  longPressHandledForCurrentTouch: false,  /* 롱프레스 처리 후 손 뗄 때까지 재호출 방지 */
   justHandled: null
 };
 
@@ -95,6 +96,9 @@ function renderCell(r, c) {
   }
 
   cell.addEventListener("touchstart", function(e) {
+    if (touchState.longPressHandledForCurrentTouch) {
+      return;  /* 롱프레스 이미 처리됨, 손 뗄 때까지 새 타이머 시작 안 함 */
+    }
     clearTouchTimer();
     touchState.longPressFired = false;
     touchState.targetCell = { r: r, c: c };
@@ -102,6 +106,7 @@ function renderCell(r, c) {
     touchState.timerId = setTimeout(function() {
       touchState.timerId = null;
       touchState.longPressFired = true;
+      touchState.longPressHandledForCurrentTouch = true;
       toggleFlag(r, c);  /* 롱프레스: 깃발 설치 또는 제거(토글) */
     }, LONG_PRESS_MS);
   }, { passive: true });
@@ -113,6 +118,7 @@ function renderCell(r, c) {
 
   cell.addEventListener("touchend", function(e) {
     clearTouchTimer();
+    touchState.longPressHandledForCurrentTouch = false;  /* 손 뗌 = 다음 터치에서 새로 시작 */
     if (touchState.longPressFired) {
       touchState.longPressFired = false;
       touchState.targetCell = null;
@@ -138,6 +144,7 @@ function renderCell(r, c) {
 
   cell.addEventListener("touchcancel", function() {
     clearTouchTimer();
+    touchState.longPressHandledForCurrentTouch = false;
     touchState.targetCell = null;
     touchState.longPressFired = false;
   }, { passive: true });
