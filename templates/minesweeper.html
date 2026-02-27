@@ -8,9 +8,9 @@
 
   <div class="minesweeper-controls mb-3">
     <div class="level-buttons btn-group mb-2">
-      <button type="button" class="btn btn-outline-primary active" data-level="1">1단계 (10×10, 폭탄 3개)</button>
-      <button type="button" class="btn btn-outline-primary" data-level="2">2단계 (20×20, 폭탄 5개)</button>
-      <button type="button" class="btn btn-outline-primary" data-level="3">3단계 (30×30, 폭탄 10개)</button>
+      <button type="button" class="btn btn-outline-primary active" data-level="1">1단계 (10×10, 폭탄 10개)</button>
+      <button type="button" class="btn btn-outline-primary" data-level="2">2단계 (20×20, 폭탄 20개)</button>
+      <button type="button" class="btn btn-outline-primary" data-level="3">3단계 (30×30, 폭탄 30개)</button>
     </div>
     <div class="status-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
       <span id="bombCount" class="badge bg-secondary">폭탄: 0</span>
@@ -18,6 +18,23 @@
       <button type="button" id="restartBtn" class="btn btn-warning">다시 시작</button>
     </div>
     <p class="text-muted small d-md-none mb-0">탭: 열기 / 길게 누르기: 플래그</p>
+  </div>
+
+  <div class="minesweeper-ranking mb-3">
+    <h6 class="mb-2">랭킹 (상위 5명)</h6>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>순위</th>
+          <th>난이도</th>
+          <th>아이디</th>
+          <th>성공날짜</th>
+        </tr>
+      </thead>
+      <tbody id="rankingBody">
+        <tr><td colspan="4" class="text-muted text-center">로딩 중...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="minesweeper-wrapper">
