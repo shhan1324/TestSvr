@@ -416,7 +416,10 @@ def _delete_post(post_id):
         row = rows[0]
         author = row.get("author", "")
         logged_user = session.get("username")
-        if logged_user and author == logged_user:
+        is_admin = session.get("is_admin", False)
+        if is_admin:
+            pass
+        elif logged_user and author == logged_user:
             pass
         else:
             stored = row.get("password_hash")
