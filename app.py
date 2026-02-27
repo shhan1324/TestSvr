@@ -105,6 +105,7 @@ def minesweeper():
 
 
 @app.route("/timestop", strict_slashes=False)
+@app.route("/timestop.html", strict_slashes=False)
 def timestop():
     return render_template("timestop.html")
 
