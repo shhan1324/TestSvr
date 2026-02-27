@@ -31,6 +31,7 @@
   <script>
     const postId = {{ post_id }};
     const currentUser = {{ current_user|tojson if current_user else "null" }};
+    const isAdmin = {{ "true" if is_admin else "false" }};
     let postAuthor = "";
     let currentTitle = "";
     let currentContent = "";
@@ -44,6 +45,9 @@
 
     function isOwnPost() {
       return currentUser && postAuthor && currentUser === postAuthor;
+    }
+    function canDeleteWithoutPassword() {
+      return isAdmin || isOwnPost();
     }
 
     function loadPost() {
@@ -106,7 +110,7 @@
 
     document.getElementById("btnDelete").onclick = function() {
       let password = "";
-      if (isOwnPost()) {
+      if (canDeleteWithoutPassword()) {
         if (!confirm("정말 삭제하시겠습니까?")) return;
       } else {
         password = prompt("비밀번호를 입력하세요");
