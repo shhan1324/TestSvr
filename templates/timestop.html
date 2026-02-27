@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}타임스탑{% endblock %}
+{% block content %}
+  <h1 class="mb-4">타임스탑 {% if current_user %}<span class="text-muted fs-5">({{ current_user }}님)</span>{% endif %}</h1>
+
+  <div class="timestop-controls mb-3">
+    <div class="mb-3">
+      <div class="display-4 fw-bold text-primary" id="timeDisplay">0.00</div>
+      <span class="text-muted">초</span>
+    </div>
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" id="startBtn" class="btn btn-success">시작</button>
+      <button type="button" id="stopBtn" class="btn btn-danger" disabled>스탑</button>
+    </div>
+    <div class="alert alert-info small mb-3">
+      <strong>게임룰</strong><br>
+      시작 버튼을 누르면 0.00초부터 시간이 흐릅니다. 10.00초에 정확히 스탑하면 "대단합니다!" 알럿이 표시됩니다.<br>
+      그 외의 시간에 스탑하면 랭킹에 기록됩니다. (10.00초에 가까울수록 상위 랭킹)
+    </div>
+  </div>
+
+  <div class="timestop-ranking mb-3">
+    <h6 class="mb-2">랭킹 (상위 5명)</h6>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>순위</th>
+          <th>아이디</th>
+          <th>스탑시간</th>
+          <th>등록날짜</th>
+        </tr>
+      </thead>
+      <tbody id="rankingBody">
+        <tr><td colspan="4" class="text-muted text-center">로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-3">
+    <a href="/" class="btn btn-outline-secondary">← 목록으로</a>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/timestop.js') }}"></script>
+{% endblock %}
