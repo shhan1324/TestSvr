@@ -241,6 +241,70 @@ def api_admin_blacklist(member_id):
         return _post_error(e)
 
 
+def _fmt_date_yyyymmdd(dt_str):
+    """created_at -> yyyymmdd"""
+    if not dt_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        kst = dt.astimezone(ZoneInfo("Asia/Seoul"))
+        return kst.strftime("%Y%m%d")
+    except Exception:
+        return str(dt_str)[:10].replace("-", "") if dt_str else ""
+
+
+@app.route("/api/minesweeper/ranking", methods=["GET"], strict_slashes=False)
+def api_minesweeper_ranking():
+    """성공날짜 기준 오름차순 상위 5개"""
+    if not supabase:
+        return jsonify({"ranking": []})
+    try:
+        res = supabase.table("minesweeper_records").select(
+            "id,username,level,created_at"
+        ).order("created_at", desc=False).limit(5).execute()
+        ranking = []
+        for i, row in enumerate((res.data or [])):
+            ranking.append({
+                "rank": i + 1,
+                "level": row.get("level", 1),
+                "username": row.get("username", ""),
+                "success_date": _fmt_date_yyyymmdd(row.get("created_at")),
+            })
+        return jsonify({"ranking": ranking})
+    except Exception:
+        return jsonify({"ranking": []})
+
+
+@app.route("/api/minesweeper/record", methods=["POST"], strict_slashes=False)
+def api_minesweeper_record():
+    """승리 기록 저장 (로그인 필수)"""
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    data = request.get_json() or {}
+    level = int(data.get("level", 1))
+    if level not in (1, 2, 3):
+        level = 1
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        user_id = session.get("user_id")
+        if user_id and user_id > 0:
+            pass
+        else:
+            user_id = None
+        supabase.table("minesweeper_records").insert({
+            "user_id": user_id,
+            "username": username,
+            "level": level,
+        }).execute()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return _post_error(e)
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"message": "정상입니다"})
