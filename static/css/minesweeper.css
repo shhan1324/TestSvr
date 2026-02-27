@@ -17,6 +17,13 @@
   }
 }
 
+.minesweeper-ranking {
+  max-width: 400px;
+}
+.minesweeper-ranking .table {
+  font-size: 0.875rem;
+}
+
 .minesweeper-wrapper {
   overflow-x: auto;
   overflow-y: auto;
