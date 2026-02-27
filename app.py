@@ -104,6 +104,11 @@ def minesweeper():
     return render_template("minesweeper.html")
 
 
+@app.route("/timestop", strict_slashes=False)
+def timestop():
+    return render_template("timestop.html")
+
+
 @app.route("/register", strict_slashes=False)
 def register_page():
     if session.get("username"):
@@ -295,6 +300,55 @@ def api_minesweeper_record():
         if user_id and user_id > 0:
             payload["user_id"] = user_id
         supabase.table("minesweeper_records").insert(payload).execute()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/timestop/ranking", methods=["GET"], strict_slashes=False)
+def api_timestop_ranking():
+    """10.00초에 가까울수록 상위, 상위 5개"""
+    if not supabase:
+        return jsonify({"ranking": []})
+    try:
+        res = supabase.table("timestop_records").select(
+            "username,stop_time,created_at"
+        ).execute()
+        rows = res.data or []
+        rows.sort(key=lambda r: abs(float(r.get("stop_time", 0)) - 10.0))
+        ranking = []
+        for i, row in enumerate(rows[:5]):
+            ranking.append({
+                "rank": i + 1,
+                "username": row.get("username", ""),
+                "stop_time": f"{float(row.get('stop_time', 0)):.2f}",
+                "reg_date": _fmt_date_yyyymmdd(row.get("created_at")),
+            })
+        return jsonify({"ranking": ranking})
+    except Exception:
+        return jsonify({"ranking": []})
+
+
+@app.route("/api/timestop/record", methods=["POST"], strict_slashes=False)
+def api_timestop_record():
+    """스탑 시간 기록 (로그인 필수)"""
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    data = request.get_json() or {}
+    try:
+        stop_time = float(data.get("stop_time", 0))
+    except (TypeError, ValueError):
+        stop_time = 0.0
+    stop_time = max(0.0, min(30.0, round(stop_time, 2)))
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        user_id = session.get("user_id")
+        payload = {"username": username, "stop_time": stop_time}
+        if user_id and user_id > 0:
+            payload["user_id"] = user_id
+        supabase.table("timestop_records").insert(payload).execute()
         return jsonify({"ok": True})
     except Exception as e:
         return _post_error(e)
