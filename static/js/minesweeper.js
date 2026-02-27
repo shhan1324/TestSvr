@@ -17,11 +17,13 @@ const DIRS = [
   [1, -1],  [1, 0],  [1, 1]
 ];
 
+/** 0.4초 이내 터치=열기, 0.4초 이상 롱프레스=깃발 설치/제거(토글) */
 const LONG_PRESS_MS = 400;
 
 let touchState = {
   timerId: null,
   targetCell: null,
+  touchStartTime: 0,
   longPressFired: false,
   justHandled: null
 };
@@ -96,10 +98,11 @@ function renderCell(r, c) {
     clearTouchTimer();
     touchState.longPressFired = false;
     touchState.targetCell = { r: r, c: c };
+    touchState.touchStartTime = Date.now();
     touchState.timerId = setTimeout(function() {
       touchState.timerId = null;
       touchState.longPressFired = true;
-      toggleFlag(r, c);
+      toggleFlag(r, c);  /* 롱프레스: 깃발 설치 또는 제거(토글) */
     }, LONG_PRESS_MS);
   }, { passive: true });
 
@@ -119,9 +122,13 @@ function renderCell(r, c) {
       setTimeout(function() { touchState.justHandled = null; }, 500);
       return;
     }
+    /* 0.4초 이내 터치 = 열기 */
     if (touchState.targetCell && touchState.targetCell.r === r && touchState.targetCell.c === c) {
+      const duration = Date.now() - (touchState.touchStartTime || 0);
       touchState.targetCell = null;
-      onCellClick(r, c);
+      if (duration < LONG_PRESS_MS) {
+        onCellClick(r, c);
+      }
       touchState.justHandled = { r: r, c: c, time: Date.now() };
       e.preventDefault();
       e.stopPropagation();
