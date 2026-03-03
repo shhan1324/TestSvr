@@ -308,9 +308,6 @@
           cell.classList.add("tile");
           cell.dataset.type = type;
           cell.innerHTML = "<span class=\"tile-emoji\">" + getTileEmoji(type) + "</span><span class=\"tile-num\">" + type + "</span>";
-          cell.addEventListener("click", (function(rr, cc) {
-            return function() { onTileClick(rr, cc); };
-          })(r, c));
         }
         boardEl.appendChild(cell);
       }
@@ -503,6 +500,17 @@
     loadRanking();
     setStage(1);
 
+    var boardEl = document.getElementById("sachunsung-board");
+    if (boardEl) {
+      boardEl.addEventListener("click", function(e) {
+        var cell = e.target && e.target.closest && e.target.closest(".sachunsung-cell.tile");
+        if (!cell) return;
+        var r = parseInt(cell.dataset.row, 10);
+        var c = parseInt(cell.dataset.col, 10);
+        if (!isNaN(r) && !isNaN(c)) onTileClick(r, c);
+      });
+    }
+
     document.querySelectorAll(".stage-buttons .btn").forEach(function(btn) {
       btn.addEventListener("click", function() {
         setStage(parseInt(btn.dataset.stage, 10));
@@ -517,5 +525,16 @@
       }
     });
     document.getElementById("restartBtn").addEventListener("click", startGame);
+
+    var shuffleBtn = document.getElementById("shuffleBoardBtn");
+    if (shuffleBtn) {
+      shuffleBtn.addEventListener("click", function() {
+        if (state.gameOver) return;
+        shuffleBoard();
+        renderBoard();
+        updateSelectionUI();
+        updateConnectableCountDisplay();
+      });
+    }
   });
 })();
