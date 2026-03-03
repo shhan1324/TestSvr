@@ -15,7 +15,14 @@
       <a class="navbar-brand" href="/">커뮤니티</a>
       <div class="navbar-nav ms-auto">
         {% if current_user %}
-          <span class="nav-link">{{ current_user }}님</span>
+          <span class="nav-link">
+            {% if not is_admin %}
+              <a href="/avatar" class="avatar-nav-link">Lv.{{ avatar_level }} {{ current_user }}님</a>
+              <small class="avatar-hp-badge">HP {{ avatar_con * 10 }}</small>
+            {% else %}
+              {{ current_user }}님
+            {% endif %}
+          </span>
           <a class="nav-link" href="/logout" id="navLogout">로그아웃</a>
           {% if is_admin %}
             <a class="nav-link" href="/admin/members">회원관리</a>
