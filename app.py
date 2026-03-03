@@ -291,7 +291,7 @@ def api_minesweeper_record():
         return jsonify({"error": "로그인이 필요합니다."}), 401
     data = request.get_json() or {}
     level = int(data.get("level", 1))
-    if level not in (1, 2, 3):
+    if level not in (1, 2, 3, 4, 5, 6):
         level = 1
     if not supabase:
         return _post_error("DB 미설정")
