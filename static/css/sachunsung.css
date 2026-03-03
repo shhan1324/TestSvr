@@ -92,6 +92,8 @@
   background: linear-gradient(145deg, #fff 0%, #e0e0e0 100%);
   cursor: pointer;
   border: 1px solid #bbb;
+  font-size: calc(var(--cell-size) * 0.55);
+  line-height: 1;
 }
 .sachunsung-cell.tile:hover {
   background: linear-gradient(145deg, #fff 0%, #d0e8ff 100%);
