@@ -289,14 +289,56 @@ let longPressPendingCell = null;
 function showLongPressPopup(row, col) {
   if (state.gameOver || state.revealed[row][col]) return;
   longPressPendingCell = { r: row, c: col };
+
   const popup = document.getElementById("longPressPopup");
-  if (popup) popup.style.display = "flex";
+  const inner = popup && popup.querySelector(".minesweeper-longpress-buttons");
+  if (!popup || !inner) return;
+
+  // 팝업을 먼저 표시해서 크기 측정
+  popup.style.display = "block";
+  const pw = inner.offsetWidth;
+  const ph = inner.offsetHeight;
+  const GAP = 8;
+
+  const cellEl = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+  if (!cellEl) return;
+
+  const rect = cellEl.getBoundingClientRect();
+  const cellCenterX = rect.left + rect.width / 2;
+
+  // 셀 위에 뜰 공간이 있으면 위로, 없으면 아래로
+  let top, flipDown;
+  if (rect.top - ph - GAP >= GAP) {
+    top = rect.top - ph - GAP;
+    flipDown = false;        // 화살표가 아래를 향함 (팝업 → 셀)
+  } else {
+    top = rect.bottom + GAP;
+    flipDown = true;         // 화살표가 위를 향함 (팝업 → 셀)
+  }
+
+  // 수평: 셀 중앙 기준, 화면 끝에서 클램프
+  let left = cellCenterX - pw / 2;
+  left = Math.max(GAP, Math.min(left, window.innerWidth - pw - GAP));
+
+  inner.style.top  = top  + "px";
+  inner.style.left = left + "px";
+
+  // 화살표가 셀 중앙을 정확히 가리키도록 X 위치 계산
+  const arrowX = Math.max(16, Math.min(cellCenterX - left, pw - 16));
+  inner.style.setProperty("--arrow-x", arrowX + "px");
+  inner.classList.toggle("arrow-down", !flipDown);
+  inner.classList.toggle("arrow-up",   flipDown);
 }
 
 function hideLongPressPopup() {
   longPressPendingCell = null;
   const popup = document.getElementById("longPressPopup");
-  if (popup) popup.style.display = "none";
+  if (!popup) return;
+  popup.style.display = "none";
+  const inner = popup.querySelector(".minesweeper-longpress-buttons");
+  if (inner) {
+    inner.classList.remove("arrow-down", "arrow-up");
+  }
 }
 
 function onCellClick(row, col) {
