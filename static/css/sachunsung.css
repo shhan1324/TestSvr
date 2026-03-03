@@ -31,6 +31,19 @@
   font-size: 0.875rem;
 }
 
+.sachunsung-board-header {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.sachunsung-connectable-label {
+  color: #555;
+  margin-right: 0.25rem;
+}
+.sachunsung-connectable-count {
+  font-variant-numeric: tabular-nums;
+  color: #0d6efd;
+}
+
 .sachunsung-wrapper {
   overflow: auto;
   max-width: 100%;
@@ -94,6 +107,17 @@
   border: 1px solid #bbb;
   font-size: calc(var(--cell-size) * 0.55);
   line-height: 1;
+  flex-direction: column;
+  gap: 0;
+}
+.sachunsung-cell.tile .tile-emoji {
+  line-height: 1;
+}
+.sachunsung-cell.tile .tile-num {
+  font-size: 0.45em;
+  font-weight: 700;
+  color: #555;
+  margin-top: -1px;
 }
 .sachunsung-cell.tile:hover {
   background: linear-gradient(145deg, #fff 0%, #d0e8ff 100%);
