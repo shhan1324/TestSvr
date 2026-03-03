@@ -17,9 +17,11 @@
     </div>
     <div class="status-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
       <span id="bombCount" class="badge bg-secondary">폭탄: 0</span>
+      <span id="hpDisplay" class="badge bg-success ms-hp-badge">HP: 0 / 0</span>
       <span class="text-muted small d-none d-md-inline">우클릭: 깃발 / 길게 누르기: 선택 팝업</span>
       <button type="button" id="restartBtn" class="btn btn-warning">다시 시작</button>
     </div>
+    <div id="hpDamageMsg" class="hp-damage-msg" style="display:none;"></div>
     <p class="text-muted small d-md-none mb-0">탭(0.4초 이내): 열기 / 길게 누르기(0.4초 이상): 선택 팝업</p>
   </div>
 
@@ -55,5 +57,6 @@
     <a href="/" class="btn btn-outline-secondary">← 목록으로</a>
   </div>
 
+  <script>const AVATAR_CON = {{ avatar_con }};</script>
   <script src="{{ url_for('static', filename='js/minesweeper.js') }}"></script>
 {% endblock %}
