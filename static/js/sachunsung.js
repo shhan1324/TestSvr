@@ -175,6 +175,60 @@
     return false;
   }
 
+  /** 연결 가능한 쌍이 하나라도 있으면 true */
+  function hasAnyConnectablePair() {
+    return countConnectablePairs() > 0;
+  }
+
+  /** 맞출 수 있는 조건을 만족하는 쌍의 총 개수 */
+  function countConnectablePairs() {
+    var count = 0;
+    var r1, c1, r2, c2, t1, t2;
+    for (r1 = 0; r1 < state.rows; r1++) {
+      for (c1 = 0; c1 < state.cols; c1++) {
+        t1 = getType(r1, c1);
+        if (t1 === 0) continue;
+        for (r2 = 0; r2 < state.rows; r2++) {
+          for (c2 = 0; c2 < state.cols; c2++) {
+            if (r1 === r2 && c1 === c2) continue;
+            if (r1 > r2 || (r1 === r2 && c1 >= c2)) continue;
+            t2 = getType(r2, c2);
+            if (t1 === t2 && canConnect(r1, c1, r2, c2)) count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  function updateConnectableCountDisplay() {
+    var el = document.getElementById("connectableCount");
+    if (!el) return;
+    el.textContent = state.gameOver ? "0" : String(countConnectablePairs());
+  }
+
+  /** 보드에 남은 타일들을 같은 위치에서 순서만 섞음 */
+  function shuffleBoard() {
+    var positions = [];
+    var types = [];
+    var r, c;
+    for (r = 0; r < state.rows; r++) {
+      for (c = 0; c < state.cols; c++) {
+        if (state.board[r][c] !== 0) {
+          positions.push({ r: r, c: c });
+          types.push(state.board[r][c]);
+        }
+      }
+    }
+    for (var i = types.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = types[i]; types[i] = types[j]; types[j] = tmp;
+    }
+    for (var k = 0; k < positions.length; k++) {
+      state.board[positions[k].r][positions[k].c] = types[k];
+    }
+  }
+
   function initBoard() {
     var cfg = getConfig();
     state.rows = cfg.rows;
@@ -249,7 +303,7 @@
         } else {
           cell.classList.add("tile");
           cell.dataset.type = type;
-          cell.textContent = getTileEmoji(type);
+          cell.innerHTML = "<span class=\"tile-emoji\">" + getTileEmoji(type) + "</span><span class=\"tile-num\">" + type + "</span>";
           cell.addEventListener("click", (function(rr, cc) {
             return function() { onTileClick(rr, cc); };
           })(r, c));
@@ -333,6 +387,13 @@
         cell2.replaceWith(cell2.cloneNode(true));
       }
       checkWin();
+      updateConnectableCountDisplay();
+      if (!state.gameOver && !hasAnyConnectablePair()) {
+        shuffleBoard();
+        renderBoard();
+        updateSelectionUI();
+        updateConnectableCountDisplay();
+      }
     }, 200);
   }
 
@@ -413,6 +474,12 @@
     document.getElementById("restartBtn").style.display = "none";
     initBoard();
     renderBoard();
+    var maxShuffle = 50;
+    while (!hasAnyConnectablePair() && maxShuffle-- > 0) {
+      shuffleBoard();
+      renderBoard();
+    }
+    updateConnectableCountDisplay();
   }
 
   function setStage(stage) {
