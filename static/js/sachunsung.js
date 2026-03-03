@@ -410,9 +410,12 @@
       stopTimer();
       var sec = getElapsedSec();
       setTimeout(function() {
-        alert("클리어! 소요 시간: " + formatTime(sec));
-        saveRecord(sec);
-        loadRanking();
+        saveRecord(sec).then(function(data) {
+          var msg = "클리어! 소요 시간: " + formatTime(sec);
+          if (data && data.exp_gained) msg += "  EXP +" + data.exp_gained + " 획득!";
+          alert(msg);
+          loadRanking();
+        });
       }, 250);
     }
   }
@@ -425,12 +428,14 @@
   }
 
   function saveRecord(clearTimeSec) {
-    fetch("/api/sachunsung/record", {
+    return fetch("/api/sachunsung/record", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ stage: state.stage, clear_time_sec: clearTimeSec })
-    }).catch(function() {});
+    })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return {}; });
   }
 
   function loadRanking() {
