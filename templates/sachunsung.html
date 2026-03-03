@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}사천성{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sachunsung.css') }}">
+{% endblock %}
+{% block content %}
+  <h1 class="mb-4">사천성 {% if current_user %}<span class="text-muted fs-5">({{ current_user }}님)</span>{% endif %}</h1>
+
+  <div class="sachunsung-controls mb-3">
+    <div class="stage-buttons btn-group flex-wrap mb-2">
+      <button type="button" class="btn btn-outline-primary active" data-stage="1">1단계 (30쌍)</button>
+      <button type="button" class="btn btn-outline-primary" data-stage="2">2단계 (85쌍)</button>
+      <button type="button" class="btn btn-outline-primary" data-stage="3">3단계 (140쌍)</button>
+      <button type="button" class="btn btn-outline-primary" data-stage="4">4단계 (195쌍)</button>
+      <button type="button" class="btn btn-outline-primary" data-stage="5">5단계 (250쌍)</button>
+    </div>
+    <div class="status-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span id="timerDisplay" class="sachunsung-timer">00:00.0</span>
+      <span class="text-muted small">같은 그림 두 개를 최대 2번 꺾인 선으로 연결하세요</span>
+      <button type="button" id="startBtn" class="btn btn-success">게임 시작</button>
+      <button type="button" id="restartBtn" class="btn btn-warning" style="display:none;">다시 시작</button>
+    </div>
+  </div>
+
+  <div class="sachunsung-ranking mb-3">
+    <h6 class="mb-2">랭킹 (상위 5명)</h6>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>순위</th>
+          <th>난이도</th>
+          <th>아이디</th>
+          <th>클리어 타임</th>
+          <th>기록일</th>
+        </tr>
+      </thead>
+      <tbody id="rankingBody">
+        <tr><td colspan="5" class="text-muted text-center">로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sachunsung-wrapper">
+    <div id="sachunsung-board" class="sachunsung-board"></div>
+  </div>
+
+  <div class="mt-3">
+    <a href="/" class="btn btn-outline-secondary">← 목록으로</a>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/sachunsung.js') }}"></script>
+{% endblock %}
