@@ -14,9 +14,15 @@
       <button type="button" class="btn btn-outline-primary" data-stage="4">4단계 (195쌍)</button>
       <button type="button" class="btn btn-outline-primary" data-stage="5">5단계 (250쌍)</button>
     </div>
+    <div class="alert alert-info small mb-3">
+      <strong>게임룰</strong><br>
+      같은 그림이 그려진 타일 두 개를 골라 한 쌍으로 맞춥니다. 두 타일을 <strong>직선 또는 최대 2번 꺾인 선</strong>으로 이을 수 있으면 제거됩니다.<br>
+      선은 빈 칸과 다른 타일의 <strong>바깥 테두리(외곽선)</strong>를 따라만 지나갈 수 있습니다. <strong>맵의 가장자리(외벽)를 통해서는 연결할 수 없습니다.</strong> 맵 안쪽의 빈 칸과 타일 테두리만 경로로 사용하세요.<br>
+      단계를 선택한 뒤 「게임 시작」을 누르면 타이머가 돌아가며, 모든 쌍을 맞추면 클리어 시간이 랭킹에 기록됩니다.
+    </div>
     <div class="status-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
       <span id="timerDisplay" class="sachunsung-timer">00:00.0</span>
-      <span class="text-muted small">같은 그림 두 개를 최대 2번 꺾인 선으로 연결하세요</span>
+      <span class="text-muted small">같은 그림 두 개를 직선 또는 최대 2번 꺾인 선으로 연결하세요</span>
       <button type="button" id="startBtn" class="btn btn-success">게임 시작</button>
       <button type="button" id="restartBtn" class="btn btn-warning" style="display:none;">다시 시작</button>
     </div>
