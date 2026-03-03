@@ -689,13 +689,24 @@ def posts_collection():
 
         total = getattr(res, "count", None) or len(res.data or [])
 
-        # 작성자 레벨 배치 조회
+        # 작성자 레벨·경험치 배치 조회 (랭킹: 1순위 LEVEL 높은 순, 2순위 경험치 많은 순)
         user_ids = list({row["user_id"] for row in (res.data or []) if row.get("user_id")})
         level_map = {}
+        exp_map = {}
+        rank_map = {}
         if user_ids:
-            av_res = supabase.table("avatars").select("user_id,level").in_("user_id", user_ids).execute()
-            for av in (av_res.data or []):
-                level_map[av["user_id"]] = av.get("level", 1)
+            av_res = supabase.table("avatars").select("user_id,level,exp").in_("user_id", user_ids).execute()
+            rows_av = [(av["user_id"], av.get("level", 1), av.get("exp", 0)) for av in (av_res.data or [])]
+            rows_av.sort(key=lambda x: (-x[1], -x[2]))  # level 내림차순, exp 내림차순
+            rank = 0
+            prev = (None, None)
+            for uid, lv, exp in rows_av:
+                if (lv, exp) != prev:
+                    rank += 1
+                    prev = (lv, exp)
+                level_map[uid] = lv
+                exp_map[uid] = exp
+                rank_map[uid] = rank
 
         posts = []
         for i, row in enumerate(res.data or []):
@@ -703,8 +714,10 @@ def posts_collection():
             posts.append({
                 "id": row["id"],
                 "number": total - offset - i,
+                "author_rank": rank_map.get(uid) if uid else None,
                 "author": row.get("author", ""),
                 "author_level": level_map.get(uid, 1) if uid else None,
+                "author_exp": exp_map.get(uid, 0) if uid else None,
                 "title": row.get("title", ""),
                 "created_at": _fmt_dt(row.get("created_at")),
             })
