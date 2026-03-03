@@ -180,6 +180,11 @@ def minesweeper():
     return render_template("minesweeper.html")
 
 
+@app.route("/sachunsung", strict_slashes=False)
+def sachunsung():
+    return render_template("sachunsung.html")
+
+
 @app.route("/timestop", strict_slashes=False)
 @app.route("/timestop.html", strict_slashes=False)
 def timestop():
@@ -504,6 +509,70 @@ def api_minesweeper_record():
         result = {"ok": True}
         if user_id and user_id > 0:
             exp_gained = level * 50
+            award = _award_exp(user_id, exp_gained)
+            _sync_avatar_session(user_id)
+            result["exp_gained"] = exp_gained
+            result["leveled_up"] = award["leveled_up"]
+            result["level"] = award["level"]
+        return jsonify(result)
+    except Exception as e:
+        return _post_error(e)
+
+
+# ──────────────────────────────────────────────
+# 사천성
+# ──────────────────────────────────────────────
+
+@app.route("/api/sachunsung/ranking", methods=["GET"], strict_slashes=False)
+def api_sachunsung_ranking():
+    """1순위 난이도(단계) 높은 순, 2순위 클리어 타임 짧은 순, 상위 5개"""
+    if not supabase:
+        return jsonify({"ranking": []})
+    try:
+        res = supabase.table("sachunsung_records").select(
+            "id,username,stage,clear_time_sec,created_at"
+        ).order("stage", desc=True).order("clear_time_sec", desc=False).limit(5).execute()
+        ranking = []
+        for i, row in enumerate((res.data or [])):
+            ranking.append({
+                "rank": i + 1,
+                "stage": row.get("stage", 1),
+                "username": row.get("username", ""),
+                "clear_time_sec": float(row.get("clear_time_sec", 0)),
+                "reg_date": _fmt_date_yyyymmdd(row.get("created_at")),
+            })
+        return jsonify({"ranking": ranking})
+    except Exception:
+        return jsonify({"ranking": []})
+
+
+@app.route("/api/sachunsung/record", methods=["POST"], strict_slashes=False)
+def api_sachunsung_record():
+    """클리어 기록 저장 (로그인 필수)"""
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    data = request.get_json() or {}
+    stage = int(data.get("stage", 1))
+    if stage not in (1, 2, 3, 4, 5):
+        stage = 1
+    try:
+        clear_time_sec = float(data.get("clear_time_sec", 0))
+    except (TypeError, ValueError):
+        clear_time_sec = 0.0
+    clear_time_sec = max(0.0, round(clear_time_sec, 2))
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        user_id = session.get("user_id")
+        payload = {"username": username, "stage": stage, "clear_time_sec": clear_time_sec}
+        if user_id and user_id > 0:
+            payload["user_id"] = user_id
+        supabase.table("sachunsung_records").insert(payload).execute()
+
+        result = {"ok": True}
+        if user_id and user_id > 0:
+            exp_gained = stage * 30
             award = _award_exp(user_id, exp_gained)
             _sync_avatar_session(user_id)
             result["exp_gained"] = exp_gained
