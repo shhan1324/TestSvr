@@ -1,0 +1,128 @@
+/* 사천성 스타일 */
+
+.sachunsung-controls {
+  max-width: 800px;
+}
+
+.stage-buttons .btn {
+  white-space: nowrap;
+}
+
+.sachunsung-timer {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 5rem;
+}
+
+@media (max-width: 768px) {
+  .stage-buttons {
+    flex-direction: column;
+  }
+  .stage-buttons .btn {
+    width: 100%;
+  }
+}
+
+.sachunsung-ranking {
+  max-width: 500px;
+}
+.sachunsung-ranking .table {
+  font-size: 0.875rem;
+}
+
+.sachunsung-wrapper {
+  overflow: auto;
+  max-width: 100%;
+  margin-bottom: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sachunsung-board {
+  display: grid;
+  gap: 2px;
+  background: #555;
+  padding: 4px;
+  margin: 0 auto;
+  width: fit-content;
+  --cell-size: 36px;
+}
+
+.sachunsung-board.cols-10 {
+  grid-template-columns: repeat(10, var(--cell-size));
+}
+.sachunsung-board.cols-15 {
+  grid-template-columns: repeat(15, var(--cell-size));
+}
+.sachunsung-board.cols-20 {
+  grid-template-columns: repeat(20, var(--cell-size));
+}
+.sachunsung-board.cols-25 {
+  grid-template-columns: repeat(25, var(--cell-size));
+}
+.sachunsung-board.cols-26 {
+  grid-template-columns: repeat(26, var(--cell-size));
+}
+.sachunsung-board.cols-17 {
+  grid-template-columns: repeat(17, var(--cell-size));
+}
+
+.sachunsung-cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  min-width: var(--cell-size);
+  min-height: var(--cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-size) * 0.6);
+  background: #ddd;
+  border-radius: 4px;
+  cursor: default;
+  user-select: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.sachunsung-cell.empty {
+  background: #e8e8e8;
+  cursor: default;
+}
+
+.sachunsung-cell.tile {
+  background: linear-gradient(145deg, #fff 0%, #e0e0e0 100%);
+  cursor: pointer;
+  border: 1px solid #bbb;
+}
+.sachunsung-cell.tile:hover {
+  background: linear-gradient(145deg, #fff 0%, #d0e8ff 100%);
+  border-color: #7ab;
+}
+.sachunsung-cell.tile.selected {
+  background: linear-gradient(145deg, #b8d4ff 0%, #7ab 100%);
+  border-color: #48a;
+  transform: scale(1.05);
+  box-shadow: 0 0 8px rgba(0, 120, 180, 0.5);
+}
+
+.sachunsung-cell.tile.removing {
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+/* 타일 종류별 색상 힌트 (data-type 기반, JS에서 1~N 설정) */
+.sachunsung-cell.tile[data-type="1"] { --tile-hue: 0; }
+.sachunsung-cell.tile[data-type="2"] { --tile-hue: 30; }
+.sachunsung-cell.tile[data-type="3"] { --tile-hue: 60; }
+.sachunsung-cell.tile[data-type="4"] { --tile-hue: 120; }
+.sachunsung-cell.tile[data-type="5"] { --tile-hue: 180; }
+.sachunsung-cell.tile[data-type="6"] { --tile-hue: 240; }
+.sachunsung-cell.tile[data-type="7"] { --tile-hue: 280; }
+.sachunsung-cell.tile[data-type="8"] { --tile-hue: 320; }
+
+@media (max-width: 768px) {
+  .sachunsung-board {
+    --cell-size: 28px;
+  }
+}
