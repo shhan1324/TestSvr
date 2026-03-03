@@ -263,13 +263,13 @@ def _fmt_date_yyyymmdd(dt_str):
 
 @app.route("/api/minesweeper/ranking", methods=["GET"], strict_slashes=False)
 def api_minesweeper_ranking():
-    """성공날짜 기준 오름차순 상위 5개"""
+    """1순위 단계(높을수록), 2순위 클리어일(최신일수록) 상위 5개"""
     if not supabase:
         return jsonify({"ranking": []})
     try:
         res = supabase.table("minesweeper_records").select(
             "id,username,level,created_at"
-        ).order("created_at", desc=False).limit(5).execute()
+        ).order("level", desc=True).order("created_at", desc=True).limit(5).execute()
         ranking = []
         for i, row in enumerate((res.data or [])):
             ranking.append({
