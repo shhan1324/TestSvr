@@ -3,12 +3,18 @@
  * 1단계: 10x10, 폭탄 10개
  * 2단계: 20x20, 폭탄 20개
  * 3단계: 30x30, 폭탄 30개
+ * 4단계: 10x10, 폭탄 20개
+ * 5단계: 20x20, 폭탄 64개
+ * 6단계: 30x30, 폭탄 145개
  */
 
 const LEVELS = {
   1: { rows: 10, cols: 10, bombs: 10 },
   2: { rows: 20, cols: 20, bombs: 20 },
-  3: { rows: 30, cols: 30, bombs: 30 }
+  3: { rows: 30, cols: 30, bombs: 30 },
+  4: { rows: 10, cols: 10, bombs: 20 },
+  5: { rows: 20, cols: 20, bombs: 64 },
+  6: { rows: 30, cols: 30, bombs: 145 }
 };
 
 const DIRS = [
