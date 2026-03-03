@@ -48,7 +48,9 @@ let state = {
   gameOver: false,
   won: false,
   bombHitRow: -1,
-  bombHitCol: -1
+  bombHitCol: -1,
+  hp: 50,
+  maxHp: 50
 };
 
 function getConfig() {
@@ -228,13 +230,26 @@ function reveal(row, col) {
   }
 
   if (state.grid[row][col]) {
+    state.hp -= 100;
+    if (state.hp > 0) {
+      // HP가 남아 있으면 폭탄을 깃발 처리하고 계속 진행
+      state.flagged[row][col] = true;
+      updateCellUI(row, col);
+      updateBombCountDisplay();
+      updateHpDisplay();
+      showHpDamage(state.hp, state.maxHp);
+      return;
+    }
+    // HP 소진 → 게임 오버
+    state.hp = 0;
     state.gameOver = true;
     state.won = false;
     state.bombHitRow = row;
     state.bombHitCol = col;
     revealAllBombs();
     updateCellUI(row, col);
-    alert("게임 오버! 폭탄을 밟았습니다.");
+    updateHpDisplay();
+    alert("게임 오버! HP가 모두 소진되었습니다.");
     return;
   }
 
@@ -359,6 +374,32 @@ function escapeHtmlRank(s) {
   return div.innerHTML;
 }
 
+function updateHpDisplay() {
+  const el = document.getElementById("hpDisplay");
+  if (!el) return;
+  el.textContent = `HP: ${state.hp} / ${state.maxHp}`;
+  const pct = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  el.className = "badge ms-hp-badge " +
+    (pct > 0.5 ? "bg-success" : pct > 0.25 ? "bg-warning text-dark" : "bg-danger");
+}
+
+let _hpDamageTimer = null;
+function showHpDamage(remaining, maxHp) {
+  const el = document.getElementById("hpDamageMsg");
+  if (!el) return;
+  el.textContent = `💥 폭탄! HP -100 → 남은 HP: ${remaining} / ${maxHp}`;
+  el.style.display = "";
+  el.classList.remove("hp-damage-active");
+  void el.offsetWidth; // reflow로 애니메이션 재시작
+  el.classList.add("hp-damage-active");
+  if (_hpDamageTimer) clearTimeout(_hpDamageTimer);
+  _hpDamageTimer = setTimeout(function() {
+    el.style.display = "none";
+    el.classList.remove("hp-damage-active");
+    _hpDamageTimer = null;
+  }, 2500);
+}
+
 function updateBombCountDisplay() {
   let flags = 0;
   for (let r = 0; r < state.rows; r++) {
@@ -388,6 +429,7 @@ function buildBoard() {
 
 function startGame(level) {
   const cfg = LEVELS[level] || LEVELS[1];
+  const maxHp = (typeof AVATAR_CON !== "undefined" ? AVATAR_CON : 5) * 10;
   state = {
     level,
     rows: cfg.rows,
@@ -400,14 +442,22 @@ function startGame(level) {
     gameOver: false,
     won: false,
     bombHitRow: -1,
-    bombHitCol: -1
+    bombHitCol: -1,
+    hp: maxHp,
+    maxHp: maxHp
   };
+
+  // 대미지 메시지 초기화
+  const dmgEl = document.getElementById("hpDamageMsg");
+  if (dmgEl) { dmgEl.style.display = "none"; dmgEl.classList.remove("hp-damage-active"); }
+  if (_hpDamageTimer) { clearTimeout(_hpDamageTimer); _hpDamageTimer = null; }
 
   document.querySelectorAll(".level-buttons .btn").forEach(btn => {
     btn.classList.toggle("active", parseInt(btn.dataset.level, 10) === level);
   });
 
   updateBombCountDisplay();
+  updateHpDisplay();
   buildBoard();
 }
 
