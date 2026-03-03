@@ -13,11 +13,27 @@
     </div>
   </div>
 
+  <div class="mb-3">
+    <h6 class="mb-2">랭킹 (상위 5명 · 레벨/경험치 순)</h6>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>순위</th>
+          <th>아이디</th>
+          <th>레벨</th>
+          <th>경험치</th>
+        </tr>
+      </thead>
+      <tbody id="rankingBody">
+        <tr><td colspan="4" class="text-muted text-center">로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <div class="table-wrap">
     <table class="table table-striped table-hover">
       <thead>
         <tr>
-          <th>순위</th>
           <th>번호</th>
           <th>제목</th>
           <th>작성자</th>
@@ -53,15 +69,12 @@
           const posts = data.posts || [];
           const tbody = document.getElementById("postsBody");
           tbody.innerHTML = posts.map(p => {
-            const rankCell = p.author_rank != null
-              ? "<span class=\"badge bg-primary\">" + p.author_rank + "위</span>"
-              : "<span class=\"text-muted\">-</span>";
             const lvBadge = p.author_level != null
               ? " <small class=\"text-muted\">Lv." + p.author_level + "</small>"
               : "";
-            return "<tr><td class=\"text-center\">" + rankCell + "</td><td>" + p.number + "</td><td class=\"post-title\"><a href=\"/post/" + p.id + "\">" + escapeHtml(p.title) + "</a></td><td>" +
+            return "<tr><td>" + p.number + "</td><td class=\"post-title\"><a href=\"/post/" + p.id + "\">" + escapeHtml(p.title) + "</a></td><td>" +
               escapeHtml(p.author) + lvBadge + "</td><td>" + escapeHtml(p.created_at) + "</td></tr>";
-          }).join("") || "<tr><td colspan=\"5\" class=\"text-center text-muted\">게시글이 없습니다.</td></tr>";
+          }).join("") || "<tr><td colspan=\"4\" class=\"text-center text-muted\">게시글이 없습니다.</td></tr>";
 
           const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
           const indicator = document.getElementById("pageIndicator");
@@ -75,9 +88,25 @@
             indicator.appendChild(a);
           }
         })
-        .catch(err => { document.getElementById("postsBody").innerHTML = "<tr><td colspan=\"5\" class=\"text-center text-danger\">로드 실패: " + escapeHtml(err.message) + "</td></tr>"; });
+        .catch(err => { document.getElementById("postsBody").innerHTML = "<tr><td colspan=\"4\" class=\"text-center text-danger\">로드 실패: " + escapeHtml(err.message) + "</td></tr>"; });
     }
 
+    function loadRanking() {
+      fetch("/api/ranking/authors?limit=5", { credentials: "include" })
+        .then(r => r.json())
+        .then(data => {
+          const list = data.ranking || [];
+          const tbody = document.getElementById("rankingBody");
+          if (list.length === 0) {
+            tbody.innerHTML = "<tr><td colspan=\"4\" class=\"text-center text-muted\">기록이 없습니다.</td></tr>";
+            return;
+          }
+          tbody.innerHTML = list.map(r => "<tr><td>" + r.rank + "</td><td>" + escapeHtml(r.username) + "</td><td>Lv." + r.level + "</td><td>" + r.exp + "</td></tr>").join("");
+        })
+        .catch(() => { document.getElementById("rankingBody").innerHTML = "<tr><td colspan=\"4\" class=\"text-center text-muted\">로딩 실패</td></tr>"; });
+    }
+
+    loadRanking();
     loadPage(1);
   </script>
 {% endblock %}
