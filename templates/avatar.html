@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}아바타 - 커뮤니티{% endblock %}
+{% block content %}
+<h1 class="mb-4">내 아바타</h1>
+
+<div id="avatarLoading" class="text-muted">로딩 중...</div>
+<div id="avatarContent" style="display:none">
+
+  <div class="avatar-card mb-4">
+    <div class="avatar-card-header">
+      <span class="avatar-username">{{ current_user }}님</span>
+      <span class="avatar-level-badge" id="avLevel"></span>
+    </div>
+
+    <!-- EXP 바 -->
+    <div class="mb-3">
+      <div class="d-flex justify-content-between mb-1">
+        <small class="text-muted">EXP</small>
+        <small id="avExpText" class="text-muted"></small>
+      </div>
+      <div class="exp-bar-bg">
+        <div class="exp-bar" id="avExpBar"></div>
+      </div>
+    </div>
+
+    <!-- HP -->
+    <div class="mb-3">
+      <span class="stat-label">HP</span>
+      <span id="avHp" class="stat-value text-danger fw-bold"></span>
+    </div>
+
+    <!-- 스탯 -->
+    <div class="stat-grid">
+      <div class="stat-item">
+        <span class="stat-label">STR</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="stat-point-btn" data-stat="str" title="STR +1">+</button>
+          <span id="avStr" class="stat-value"></span>
+        </div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">CON</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="stat-point-btn" data-stat="con" title="CON +1">+</button>
+          <span id="avCon" class="stat-value"></span>
+        </div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">DEX</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="stat-point-btn" data-stat="dex" title="DEX +1">+</button>
+          <span id="avDex" class="stat-value"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 미분배 포인트 -->
+    <div class="mt-3" id="statPointsRow">
+      <span class="badge bg-warning text-dark fs-6">미분배 포인트: <span id="avStatPoints"></span></span>
+    </div>
+  </div>
+
+  <!-- EXP 획득 방법 안내 -->
+  <div class="card">
+    <div class="card-header fw-bold">EXP 획득 방법</div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item d-flex justify-content-between">
+        <span>지뢰찾기 클리어</span>
+        <span class="text-primary">단계 × 50 EXP (Lv1=50 ~ Lv6=300)</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>타임스탑 기록</span>
+        <span class="text-primary">10초에 가까울수록 최대 100 EXP</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>게시글 작성</span>
+        <span class="text-primary">10 EXP</span>
+      </li>
+    </ul>
+    <div class="card-footer text-muted small">
+      레벨 n → n+1: n × 100 EXP 필요 / 레벨업 시 스탯 포인트 +1
+    </div>
+  </div>
+
+</div>
+
+<div id="avatarError" class="text-danger" style="display:none"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let avatarData = null;
+
+  function renderAvatar(av) {
+    avatarData = av;
+    const level = av.level;
+    const exp = av.exp;
+    const expReq = av.exp_required;
+    const pct = expReq > 0 ? Math.min(100, Math.round(exp / expReq * 100)) : 100;
+
+    document.getElementById("avLevel").textContent = "Lv." + level;
+    document.getElementById("avExpText").textContent = exp + " / " + expReq + " (" + pct + "%)";
+    document.getElementById("avExpBar").style.width = pct + "%";
+    document.getElementById("avHp").textContent = av.hp;
+    document.getElementById("avStr").textContent = av.str;
+    document.getElementById("avCon").textContent = av.con;
+    document.getElementById("avDex").textContent = av.dex;
+    document.getElementById("avStatPoints").textContent = av.stat_points;
+
+    // 포인트 없으면 배지 숨김
+    document.getElementById("statPointsRow").style.display = av.stat_points > 0 ? "" : "none";
+
+    // + 버튼 활성/비활성
+    document.querySelectorAll(".stat-point-btn").forEach(btn => {
+      btn.disabled = av.stat_points <= 0;
+    });
+  }
+
+  function loadAvatar() {
+    fetch("/api/avatar", { credentials: "include" })
+      .then(r => r.json().then(j => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        document.getElementById("avatarLoading").style.display = "none";
+        if (ok) {
+          document.getElementById("avatarContent").style.display = "block";
+          renderAvatar(json);
+        } else {
+          document.getElementById("avatarError").textContent = json.error || "오류";
+          document.getElementById("avatarError").style.display = "block";
+        }
+      })
+      .catch(err => {
+        document.getElementById("avatarLoading").style.display = "none";
+        document.getElementById("avatarError").textContent = "로드 실패: " + err.message;
+        document.getElementById("avatarError").style.display = "block";
+      });
+  }
+
+  document.querySelectorAll(".stat-point-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      const stat = this.dataset.stat;
+      this.disabled = true;
+      fetch("/api/avatar/stat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ stat: stat, amount: 1 })
+      })
+        .then(r => r.json().then(j => ({ ok: r.ok, json: j })))
+        .then(({ ok, json }) => {
+          if (ok) {
+            loadAvatar();
+          } else {
+            alert("오류: " + (json.error || "알 수 없음"));
+            loadAvatar();
+          }
+        })
+        .catch(err => {
+          alert("오류: " + err.message);
+          loadAvatar();
+        });
+    });
+  });
+
+  loadAvatar();
+</script>
+{% endblock %}
