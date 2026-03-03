@@ -674,21 +674,20 @@ def db_check():
 
 @app.route("/api/ranking/authors", methods=["GET"], strict_slashes=False)
 def ranking_authors():
-    """게시글 작성자 랭킹. 1순위 LEVEL 높은 순, 2순위 경험치 많은 순. 상위 N명."""
+    """레벨/경험치 랭킹. 게시글 작성 여부와 무관하게 avatars 기준. 1순위 LEVEL 높은 순, 2순위 경험치 많은 순."""
     if not supabase:
         return _post_error("DB 미설정")
     try:
         limit = max(1, min(20, int(request.args.get("limit", 5))))
-        res = supabase.table("posts").select("user_id").execute()
-        user_ids = list({r["user_id"] for r in (res.data or []) if r.get("user_id") is not None})
-        if not user_ids:
+        av_res = supabase.table("avatars").select("user_id,level,exp").order(
+            "level", desc=True
+        ).order("exp", desc=True).execute()
+        rows = [(av["user_id"], av.get("level", 1), av.get("exp", 0)) for av in (av_res.data or [])]
+        if not rows:
             return jsonify({"ranking": []})
-
-        av_res = supabase.table("avatars").select("user_id,level,exp").in_("user_id", user_ids).execute()
+        user_ids = list({r[0] for r in rows[:limit]})
         users_res = supabase.table("users").select("id,username").in_("id", user_ids).execute()
         username_map = {u["id"]: u.get("username", "") for u in (users_res.data or [])}
-        rows = [(av["user_id"], av.get("level", 1), av.get("exp", 0)) for av in (av_res.data or [])]
-        rows.sort(key=lambda x: (-x[1], -x[2]))
         rank = 0
         prev = (None, None)
         ranking = []
