@@ -99,18 +99,22 @@
     return isInBounds(r, c) ? state.board[r][c] : 0;
   }
 
-  function pathClearRowExcludeEnds(r, cFrom, cTo) {
+  /** 행 r에서 cFrom~cTo 사이(양끝 제외)가 비었는지. skipCol이 있으면 그 열은 비어있지 않아도 통과(다른 타일 위치) */
+  function pathClearRowExcludeEnds(r, cFrom, cTo, skipCol) {
     var lo = Math.min(cFrom, cTo) + 1;
     var hi = Math.max(cFrom, cTo) - 1;
     for (var c = lo; c <= hi; c++) {
+      if (skipCol !== undefined && c === skipCol) continue;
       if (!isEmpty(r, c)) return false;
     }
     return true;
   }
-  function pathClearColExcludeEnds(c, rFrom, rTo) {
+  /** 열 c에서 rFrom~rTo 사이(양끝 제외)가 비었는지. skipRow가 있으면 그 행은 제외 */
+  function pathClearColExcludeEnds(c, rFrom, rTo, skipRow) {
     var lo = Math.min(rFrom, rTo) + 1;
     var hi = Math.max(rFrom, rTo) - 1;
     for (var r = lo; r <= hi; r++) {
+      if (skipRow !== undefined && r === skipRow) continue;
       if (!isEmpty(r, c)) return false;
     }
     return true;
@@ -139,7 +143,7 @@
     return false;
   }
 
-  /** 2번 꺾임: (r1,c1)->(r1,c')->(r2,c')->(r2,c2) for some c' */
+  /** 2번 꺾임: (r1,c1)->(r1,c')->(r2,c')->(r2,c2) for some c'. 같은 행/열에 있으면 경로상 다른 타일 위치는 비어있지 않아도 됨 */
   function canConnect2(r1, c1, r2, c2) {
     for (var c = 0; c < state.cols; c++) {
       if (c === c1 || c === c2) continue;
@@ -149,7 +153,7 @@
       if (!isEmpty(midR2, midC2)) continue;
       if (!pathClearRowExcludeEnds(r1, c1, c)) continue;
       if (!pathClearColExcludeEnds(c, r1, r2)) continue;
-      if (!pathClearRowExcludeEnds(r2, c, c2)) continue;
+      if (!pathClearRowExcludeEnds(r2, c, c2, r1 === r2 ? c1 : undefined)) continue;
       return true;
     }
     for (var r = 0; r < state.rows; r++) {
@@ -158,7 +162,7 @@
       if (!isEmpty(r, c2)) continue;
       if (!pathClearColExcludeEnds(c1, r1, r)) continue;
       if (!pathClearRowExcludeEnds(r, c1, c2)) continue;
-      if (!pathClearColExcludeEnds(c2, r, r2)) continue;
+      if (!pathClearColExcludeEnds(c2, r, r2, c1 === c2 ? r1 : undefined)) continue;
       return true;
     }
     return false;
