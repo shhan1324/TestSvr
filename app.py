@@ -1,3 +1,4 @@
+import math
 import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -45,11 +46,82 @@ def _fmt_dt(dt_str):
         return str(dt_str)
 
 
+# ──────────────────────────────────────────────
+# 아바타 헬퍼
+# ──────────────────────────────────────────────
+
+def _get_avatar(user_id):
+    """avatars 조회. 없으면 기본값 반환."""
+    res = supabase.table("avatars").select("*").eq("user_id", user_id).execute()
+    if res.data:
+        return res.data[0]
+    return {"level": 1, "exp": 0, "stat_points": 0, "str": 5, "con": 5, "dex": 5}
+
+
+def _ensure_avatar(user_id):
+    """아바타 레코드가 없으면 기본값으로 생성."""
+    res = supabase.table("avatars").select("id").eq("user_id", user_id).execute()
+    if not (res.data and len(res.data) > 0):
+        supabase.table("avatars").insert({"user_id": user_id}).execute()
+
+
+def _award_exp(user_id, exp_gained):
+    """EXP 부여 및 레벨업 처리. 반환: {leveled_up, level, exp}"""
+    avatar = _get_avatar(user_id)
+    level = avatar.get("level", 1)
+    exp = avatar.get("exp", 0) + exp_gained
+    stat_points = avatar.get("stat_points", 0)
+    leveled_up = False
+    while level < 99:
+        required = level * 100
+        if exp >= required:
+            exp -= required
+            level += 1
+            stat_points += 1
+            leveled_up = True
+        else:
+            break
+    supabase.table("avatars").update({
+        "level": level,
+        "exp": exp,
+        "stat_points": stat_points,
+        "updated_at": "now()",
+    }).eq("user_id", user_id).execute()
+    return {"leveled_up": leveled_up, "level": level, "exp": exp}
+
+
+def _load_avatar_to_session(user_id):
+    """로그인 시 아바타 정보를 세션에 저장."""
+    _ensure_avatar(user_id)
+    av = _get_avatar(user_id)
+    session["avatar_level"] = av.get("level", 1)
+    session["avatar_exp"] = av.get("exp", 0)
+    session["avatar_stat_points"] = av.get("stat_points", 0)
+    session["avatar_str"] = av.get("str", 5)
+    session["avatar_con"] = av.get("con", 5)
+    session["avatar_dex"] = av.get("dex", 5)
+
+
+def _sync_avatar_session(user_id):
+    """EXP 획득 후 세션 갱신."""
+    _load_avatar_to_session(user_id)
+
+
+# ──────────────────────────────────────────────
+# Context processor
+# ──────────────────────────────────────────────
+
 @app.context_processor
 def inject_user():
     return {
         "current_user": session.get("username"),
         "is_admin": session.get("is_admin", False),
+        "avatar_level": session.get("avatar_level", 1),
+        "avatar_exp": session.get("avatar_exp", 0),
+        "avatar_stat_points": session.get("avatar_stat_points", 0),
+        "avatar_str": session.get("avatar_str", 5),
+        "avatar_con": session.get("avatar_con", 5),
+        "avatar_dex": session.get("avatar_dex", 5),
     }
 
 
@@ -82,6 +154,10 @@ def _require_login():
         return jsonify({"error": "로그인이 필요합니다.", "redirect": "/login"}), 401
     return redirect(url_for("login_page"))
 
+
+# ──────────────────────────────────────────────
+# 페이지 라우트
+# ──────────────────────────────────────────────
 
 @app.route("/", strict_slashes=False)
 @app.route("/index.html", strict_slashes=False)
@@ -130,6 +206,15 @@ def admin_members_page():
     return render_template("admin_members.html")
 
 
+@app.route("/avatar", strict_slashes=False)
+def avatar_page():
+    return render_template("avatar.html")
+
+
+# ──────────────────────────────────────────────
+# 인증 API
+# ──────────────────────────────────────────────
+
 @app.route("/api/auth/register", methods=["POST"], strict_slashes=False)
 def api_register():
     data = request.get_json() or {}
@@ -149,10 +234,13 @@ def api_register():
         if res.data and len(res.data) > 0:
             return jsonify({"error": "이미 사용 중인 아이디입니다."}), 400
         password_hash = generate_password_hash(password)
-        supabase.table("users").insert({
+        ins = supabase.table("users").insert({
             "username": username,
             "password_hash": password_hash,
         }).execute()
+        new_user_id = (ins.data or [{}])[0].get("id")
+        if new_user_id:
+            _ensure_avatar(new_user_id)
         return jsonify({"ok": True}), 201
     except Exception as e:
         err = str(e).lower()
@@ -189,9 +277,11 @@ def api_login():
             return jsonify({"error": "블랙리스트로 지정되어 로그인할 수 없습니다."}), 403
         if not check_password_hash(row.get("password_hash", ""), password):
             return jsonify({"error": "아이디 또는 비밀번호가 올바르지 않습니다."}), 401
-        session["user_id"] = row["id"]
+        user_id = row["id"]
+        session["user_id"] = user_id
         session["username"] = username
         session["is_admin"] = False
+        _load_avatar_to_session(user_id)
         return jsonify({"ok": True, "is_admin": False})
     except Exception as e:
         return _post_error(e)
@@ -205,6 +295,10 @@ def api_logout():
         return redirect(url_for("index"))
     return jsonify({"ok": True})
 
+
+# ──────────────────────────────────────────────
+# 관리자 API
+# ──────────────────────────────────────────────
 
 @app.route("/api/admin/members", methods=["GET"], strict_slashes=False)
 def api_admin_members():
@@ -246,6 +340,111 @@ def api_admin_blacklist(member_id):
     except Exception as e:
         return _post_error(e)
 
+
+# ──────────────────────────────────────────────
+# 아바타 API
+# ──────────────────────────────────────────────
+
+@app.route("/api/avatar", methods=["GET"], strict_slashes=False)
+def api_avatar_me():
+    """내 아바타 JSON"""
+    user_id = session.get("user_id")
+    if not user_id or user_id < 0:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        av = _get_avatar(user_id)
+        level = av.get("level", 1)
+        con = av.get("con", 5)
+        return jsonify({
+            "level": level,
+            "exp": av.get("exp", 0),
+            "exp_required": level * 100,
+            "stat_points": av.get("stat_points", 0),
+            "str": av.get("str", 5),
+            "con": con,
+            "dex": av.get("dex", 5),
+            "hp": con * 10,
+        })
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/avatar/<username>", methods=["GET"], strict_slashes=False)
+def api_avatar_user(username):
+    """특정 사용자 아바타 JSON (공개)"""
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        res = supabase.table("users").select("id").eq("username", username).execute()
+        rows = res.data or []
+        if not rows:
+            return jsonify({"error": "사용자를 찾을 수 없습니다."}), 404
+        uid = rows[0]["id"]
+        av = _get_avatar(uid)
+        level = av.get("level", 1)
+        con = av.get("con", 5)
+        return jsonify({
+            "username": username,
+            "level": level,
+            "exp": av.get("exp", 0),
+            "exp_required": level * 100,
+            "stat_points": av.get("stat_points", 0),
+            "str": av.get("str", 5),
+            "con": con,
+            "dex": av.get("dex", 5),
+            "hp": con * 10,
+        })
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/avatar/stat", methods=["POST"], strict_slashes=False)
+def api_avatar_stat():
+    """스탯 포인트 분배. body: {"stat": "str"|"con"|"dex", "amount": N}"""
+    user_id = session.get("user_id")
+    if not user_id or user_id < 0:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    if not supabase:
+        return _post_error("DB 미설정")
+    data = request.get_json() or {}
+    stat = data.get("stat", "").lower()
+    if stat not in ("str", "con", "dex"):
+        return jsonify({"error": "유효하지 않은 스탯입니다."}), 400
+    try:
+        amount = int(data.get("amount", 1))
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount는 정수여야 합니다."}), 400
+    if amount < 1:
+        return jsonify({"error": "amount는 1 이상이어야 합니다."}), 400
+    try:
+        av = _get_avatar(user_id)
+        available = av.get("stat_points", 0)
+        if amount > available:
+            return jsonify({"error": f"스탯 포인트가 부족합니다. (보유: {available})"}), 400
+        new_stat = av.get(stat, 5) + amount
+        new_points = available - amount
+        supabase.table("avatars").update({
+            stat: new_stat,
+            "stat_points": new_points,
+            "updated_at": "now()",
+        }).eq("user_id", user_id).execute()
+        _sync_avatar_session(user_id)
+        con = av.get("con", 5) if stat != "con" else new_stat
+        return jsonify({
+            "ok": True,
+            stat: new_stat,
+            "stat_points": new_points,
+            "hp": con * 10,
+        })
+    except Exception as e:
+        return _post_error(e)
+
+
+# ──────────────────────────────────────────────
+# 지뢰찾기
+# ──────────────────────────────────────────────
 
 def _fmt_date_yyyymmdd(dt_str):
     """created_at -> yyyymmdd"""
@@ -301,10 +500,23 @@ def api_minesweeper_record():
         if user_id and user_id > 0:
             payload["user_id"] = user_id
         supabase.table("minesweeper_records").insert(payload).execute()
-        return jsonify({"ok": True})
+
+        result = {"ok": True}
+        if user_id and user_id > 0:
+            exp_gained = level * 50
+            award = _award_exp(user_id, exp_gained)
+            _sync_avatar_session(user_id)
+            result["exp_gained"] = exp_gained
+            result["leveled_up"] = award["leveled_up"]
+            result["level"] = award["level"]
+        return jsonify(result)
     except Exception as e:
         return _post_error(e)
 
+
+# ──────────────────────────────────────────────
+# 타임스탑
+# ──────────────────────────────────────────────
 
 @app.route("/api/timestop/ranking", methods=["GET"], strict_slashes=False)
 def api_timestop_ranking():
@@ -350,10 +562,23 @@ def api_timestop_record():
         if user_id and user_id > 0:
             payload["user_id"] = user_id
         supabase.table("timestop_records").insert(payload).execute()
-        return jsonify({"ok": True})
+
+        result = {"ok": True}
+        if user_id and user_id > 0:
+            exp_gained = max(10, 100 - math.floor(abs(stop_time - 10) * 5))
+            award = _award_exp(user_id, exp_gained)
+            _sync_avatar_session(user_id)
+            result["exp_gained"] = exp_gained
+            result["leveled_up"] = award["leveled_up"]
+            result["level"] = award["level"]
+        return jsonify(result)
     except Exception as e:
         return _post_error(e)
 
+
+# ──────────────────────────────────────────────
+# 게시판 API
+# ──────────────────────────────────────────────
 
 @app.route("/api/health")
 def health():
@@ -366,7 +591,7 @@ def db_check():
     if not supabase:
         return jsonify({"ok": False, "error": "SUPABASE_URL/SUPABASE_KEY 미설정"}), 500
     try:
-        result = supabase.table("health").select("1").limit(1).execute()
+        supabase.table("health").select("1").limit(1).execute()
         return jsonify({"ok": True, "message": "Supabase 연결 정상"})
     except Exception as e:
         err = str(e).lower()
@@ -389,18 +614,28 @@ def posts_collection():
         limit = max(1, min(50, int(request.args.get("limit", 15))))
         offset = (page - 1) * limit
 
-        res = supabase.table("posts").select("id,author,title,created_at", count="exact").order(
+        res = supabase.table("posts").select("id,author,title,created_at,user_id", count="exact").order(
             "created_at", desc=True
         ).range(offset, offset + limit - 1).execute()
 
         total = getattr(res, "count", None) or len(res.data or [])
 
+        # 작성자 레벨 배치 조회
+        user_ids = list({row["user_id"] for row in (res.data or []) if row.get("user_id")})
+        level_map = {}
+        if user_ids:
+            av_res = supabase.table("avatars").select("user_id,level").in_("user_id", user_ids).execute()
+            for av in (av_res.data or []):
+                level_map[av["user_id"]] = av.get("level", 1)
+
         posts = []
         for i, row in enumerate(res.data or []):
+            uid = row.get("user_id")
             posts.append({
                 "id": row["id"],
                 "number": total - offset - i,
                 "author": row.get("author", ""),
+                "author_level": level_map.get(uid, 1) if uid else None,
                 "title": row.get("title", ""),
                 "created_at": _fmt_dt(row.get("created_at")),
             })
@@ -440,6 +675,11 @@ def _create_post():
             payload["user_id"] = user_id
         ins = supabase.table("posts").insert(payload).execute()
         row = (ins.data or [{}])[0]
+
+        if user_id and user_id > 0:
+            _award_exp(user_id, 10)
+            _sync_avatar_session(user_id)
+
         return jsonify({"id": row.get("id"), "created_at": _fmt_dt(row.get("created_at"))}), 201
     except Exception as e:
         return _post_error(e)
@@ -461,13 +701,19 @@ def post_by_id(post_id):
         if not rows:
             return jsonify({"error": "Not found"}), 404
         row = rows[0]
+        uid = row.get("user_id")
+        author_level = None
+        if uid:
+            av = _get_avatar(uid)
+            author_level = av.get("level", 1)
         return jsonify({
             "id": row["id"],
             "author": row.get("author", ""),
+            "author_level": author_level,
             "title": row.get("title", ""),
             "content": row.get("content", ""),
             "created_at": _fmt_dt(row.get("created_at")),
-            "user_id": row.get("user_id"),
+            "user_id": uid,
         })
     except Exception as e:
         return _post_error(e)
