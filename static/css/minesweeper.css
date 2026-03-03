@@ -52,8 +52,21 @@
   --cell-size: 18px;
 }
 
+.minesweeper-board.level-4 {
+  --cell-size: 32px;
+}
+
+.minesweeper-board.level-5 {
+  --cell-size: 24px;
+}
+
+.minesweeper-board.level-6 {
+  --cell-size: 18px;
+}
+
 @media (max-width: 768px) {
-  .minesweeper-board.level-3 {
+  .minesweeper-board.level-3,
+  .minesweeper-board.level-6 {
     --cell-size: 14px;
   }
 }
