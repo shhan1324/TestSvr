@@ -50,10 +50,13 @@
           totalCount = data.total || 0;
           const posts = data.posts || [];
           const tbody = document.getElementById("postsBody");
-          tbody.innerHTML = posts.map(p =>
-            "<tr><td>" + p.number + "</td><td class=\"post-title\"><a href=\"/post/" + p.id + "\">" + escapeHtml(p.title) + "</a></td><td>" +
-            escapeHtml(p.author) + "</td><td>" + escapeHtml(p.created_at) + "</td></tr>"
-          ).join("") || "<tr><td colspan=\"4\" class=\"text-center text-muted\">게시글이 없습니다.</td></tr>";
+          tbody.innerHTML = posts.map(p => {
+            const lvBadge = p.author_level != null
+              ? " <small class=\"text-muted\">Lv." + p.author_level + "</small>"
+              : "";
+            return "<tr><td>" + p.number + "</td><td class=\"post-title\"><a href=\"/post/" + p.id + "\">" + escapeHtml(p.title) + "</a></td><td>" +
+              escapeHtml(p.author) + lvBadge + "</td><td>" + escapeHtml(p.created_at) + "</td></tr>";
+          }).join("") || "<tr><td colspan=\"4\" class=\"text-center text-muted\">게시글이 없습니다.</td></tr>";
 
           const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
           const indicator = document.getElementById("pageIndicator");
