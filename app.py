@@ -672,6 +672,41 @@ def db_check():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@app.route("/api/ranking/authors", methods=["GET"], strict_slashes=False)
+def ranking_authors():
+    """게시글 작성자 랭킹. 1순위 LEVEL 높은 순, 2순위 경험치 많은 순. 상위 N명."""
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        limit = max(1, min(20, int(request.args.get("limit", 5))))
+        res = supabase.table("posts").select("user_id").execute()
+        user_ids = list({r["user_id"] for r in (res.data or []) if r.get("user_id") is not None})
+        if not user_ids:
+            return jsonify({"ranking": []})
+
+        av_res = supabase.table("avatars").select("user_id,level,exp").in_("user_id", user_ids).execute()
+        users_res = supabase.table("users").select("id,username").in_("id", user_ids).execute()
+        username_map = {u["id"]: u.get("username", "") for u in (users_res.data or [])}
+        rows = [(av["user_id"], av.get("level", 1), av.get("exp", 0)) for av in (av_res.data or [])]
+        rows.sort(key=lambda x: (-x[1], -x[2]))
+        rank = 0
+        prev = (None, None)
+        ranking = []
+        for uid, lv, exp in rows[:limit]:
+            if (lv, exp) != prev:
+                rank += 1
+                prev = (lv, exp)
+            ranking.append({
+                "rank": rank,
+                "username": username_map.get(uid, ""),
+                "level": lv,
+                "exp": exp,
+            })
+        return jsonify({"ranking": ranking})
+    except Exception as e:
+        return _post_error(e)
+
+
 @app.route("/api/posts", methods=["GET", "POST"], strict_slashes=False)
 def posts_collection():
     if not supabase:
@@ -689,24 +724,12 @@ def posts_collection():
 
         total = getattr(res, "count", None) or len(res.data or [])
 
-        # 작성자 레벨·경험치 배치 조회 (랭킹: 1순위 LEVEL 높은 순, 2순위 경험치 많은 순)
         user_ids = list({row["user_id"] for row in (res.data or []) if row.get("user_id")})
         level_map = {}
-        exp_map = {}
-        rank_map = {}
         if user_ids:
-            av_res = supabase.table("avatars").select("user_id,level,exp").in_("user_id", user_ids).execute()
-            rows_av = [(av["user_id"], av.get("level", 1), av.get("exp", 0)) for av in (av_res.data or [])]
-            rows_av.sort(key=lambda x: (-x[1], -x[2]))  # level 내림차순, exp 내림차순
-            rank = 0
-            prev = (None, None)
-            for uid, lv, exp in rows_av:
-                if (lv, exp) != prev:
-                    rank += 1
-                    prev = (lv, exp)
-                level_map[uid] = lv
-                exp_map[uid] = exp
-                rank_map[uid] = rank
+            av_res = supabase.table("avatars").select("user_id,level").in_("user_id", user_ids).execute()
+            for av in (av_res.data or []):
+                level_map[av["user_id"]] = av.get("level", 1)
 
         posts = []
         for i, row in enumerate(res.data or []):
@@ -714,10 +737,8 @@ def posts_collection():
             posts.append({
                 "id": row["id"],
                 "number": total - offset - i,
-                "author_rank": rank_map.get(uid) if uid else None,
                 "author": row.get("author", ""),
                 "author_level": level_map.get(uid, 1) if uid else None,
-                "author_exp": exp_map.get(uid, 0) if uid else None,
                 "title": row.get("title", ""),
                 "created_at": _fmt_dt(row.get("created_at")),
             })
