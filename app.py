@@ -137,29 +137,24 @@ def _get_boss_stats(stage):
 
 
 def _calculate_win_chance(user_stats, boss_stats):
-    """전투 요인: HP, STR, DEX 기반 승리 확률(0~100) 계산"""
-    # 기본 확률 30%
-    chance = 30
-    
-    # HP 비교 (최대 30%)
-    if user_stats["hp"] >= boss_stats["hp"]:
-        chance += 30
-    else:
-        chance += (user_stats["hp"] / boss_stats["hp"]) * 30
-        
-    # STR 비교 (최대 25%)
-    if user_stats["str"] >= boss_stats["str"]:
-        chance += 25
-    else:
-        chance += (user_stats["str"] / boss_stats["str"]) * 25
-        
-    # DEX 비교 (최대 15%)
-    if user_stats["dex"] >= boss_stats["dex"]:
-        chance += 15
-    else:
-        chance += (user_stats["dex"] / boss_stats["dex"]) * 15
-        
-    return min(95, max(5, round(chance, 1)))
+    """
+    승리 확률 계산 공식 (사용자 요청 반영)
+    1. 내 능력치 == 보스 능력치 일 때 100%
+    2. 보스 능력치 >= 내 능력치 * 2 일 때 0%
+    """
+    def get_stat_score(u, b):
+        if b <= 0: return 1.0
+        ratio = u / b
+        # (ratio - 0.5) * 2 적용: ratio 1.0 -> 1.0(100%), ratio 0.5 -> 0.0(0%)
+        return max(0.0, min(1.0, (ratio - 0.5) * 2))
+
+    hp_p = get_stat_score(user_stats["hp"], boss_stats["hp"])
+    str_p = get_stat_score(user_stats["str"], boss_stats["str"])
+    dex_p = get_stat_score(user_stats["dex"], boss_stats["dex"])
+
+    # 가중치 적용 (HP 40%, STR 40%, DEX 20%)
+    total_chance = (hp_p * 0.4 + str_p * 0.4 + dex_p * 0.2) * 100
+    return round(total_chance, 1)
 
 
 # ──────────────────────────────────────────────
