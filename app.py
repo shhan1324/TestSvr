@@ -115,8 +115,14 @@ def _get_idle_progress(user_id):
     """방치형 진행 상황 조회. 없으면 생성."""
     res = supabase.table("idle_progress").select("*").eq("user_id", user_id).execute()
     if not (res.data and len(res.data) > 0):
-        # 없으면 생성
-        supabase.table("idle_progress").insert({"user_id": user_id}).execute()
+        # 없으면 생성 (기본값 명시)
+        import datetime
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        supabase.table("idle_progress").insert({
+            "user_id": user_id,
+            "current_stage": 1,
+            "last_claimed_at": now_iso
+        }).execute()
         res = supabase.table("idle_progress").select("*").eq("user_id", user_id).execute()
     return res.data[0]
 
