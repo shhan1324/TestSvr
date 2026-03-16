@@ -30,7 +30,7 @@
 | 데이터베이스 | Supabase (PostgreSQL) |
 | 배포 플랫폼 | Render (render.yaml) |
 | 실행 포트 | 5001 (기본값) |
-| 주요 기능 | 게시판, 회원관리, 지뢰찾기, 타임스탑 게임 |
+| 주요 기능 | 게시판, 회원관리, 지뢰찾기, 사천성, 타임스탑, 아바타 RPG |
 
 ---
 
@@ -54,13 +54,16 @@ C:\project\TestSvr
 │   ├── register.html           # 회원가입
 │   ├── admin_members.html      # 관리자 회원관리
 │   ├── minesweeper.html        # 지뢰찾기 게임
-│   └── timestop.html           # 타임스탑 게임
+│   ├── sachunsung.html         # 사천성 게임
+│   ├── timestop.html           # 타임스탑 게임
+│   └── avatar.html             # 아바타 정보 및 스탯
 └── static/
     ├── css/
     │   ├── board.css           # 게시판 반응형 스타일
     │   └── minesweeper.css     # 지뢰찾기 스타일
     └── js/
         ├── minesweeper.js      # 지뢰찾기 게임 로직 (~500줄)
+        ├── sachunsung.js       # 사천성 게임 로직 (~700줄)
         └── timestop.js         # 타임스탑 게임 로직 (~100줄)
 ```
 
@@ -183,11 +186,39 @@ C:\project\TestSvr
 | stop_time | NUMERIC(5,2) | 정지 시간 (0.00~30.00) |
 | created_at | TIMESTAMPTZ | 기록 일시 |
 
+### sachunsung_records
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | BIGSERIAL PK | 기록 ID |
+| user_id | BIGINT FK→users | 사용자 ID |
+| username | TEXT | 아이디 스냅샷 |
+| stage | SMALLINT | 단계 (1~5) |
+| clear_time_sec | NUMERIC(6,2) | 클리어 소요 시간 |
+| created_at | TIMESTAMPTZ | 기록 일시 |
+
+### avatars
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | BIGSERIAL PK | 고유 ID |
+| user_id | BIGINT FK→users | 사용자 ID |
+| level | INTEGER | 레벨 (1~99) |
+| exp | INTEGER | 현재 경험치 |
+| stat_points | INTEGER | 잔여 스탯 포인트 |
+| str | INTEGER | 신체 (공격 관련) |
+| con | INTEGER | 체질 (HP 관련) |
+| dex | INTEGER | 민첩 (속도 관련) |
+| created_at | TIMESTAMPTZ | 생성 일시 |
+| updated_at | TIMESTAMPTZ | 최근 갱신 일시 |
+
 ### 관계도
 
 ```
+users (1) ──── (1) avatars
 users (1) ──── (N) posts
 users (1) ──── (N) minesweeper_records
+users (1) ──── (N) sachunsung_records
 users (1) ──── (N) timestop_records
 ```
 
@@ -203,7 +234,9 @@ users (1) ──── (N) timestop_records
 | GET | `/write` | 글쓰기 페이지 | 로그인 필수 |
 | GET | `/post/<id>` | 게시글 상세 | 로그인 필수 |
 | GET | `/minesweeper` | 지뢰찾기 게임 | 로그인 필수 |
+| GET | `/sachunsung` | 사천성 게임 | 로그인 필수 |
 | GET | `/timestop` | 타임스탑 게임 | 로그인 필수 |
+| GET | `/avatar` | 내 아바타 정보 | 로그인 필수 |
 | GET | `/login` | 로그인 페이지 | 비로그인만 |
 | GET | `/register` | 회원가입 페이지 | 비로그인만 |
 | GET | `/logout` | 로그아웃 | 공개 |
@@ -266,8 +299,24 @@ users (1) ──── (N) timestop_records
 |--------|------|------|------|
 | GET | `/api/minesweeper/ranking` | 지뢰찾기 랭킹 (상위 5) | 공개 |
 | POST | `/api/minesweeper/record` | 클리어 기록 저장 | 로그인 필수 |
+| GET | `/api/sachunsung/ranking` | 사천성 랭킹 (상위 5) | 공개 |
+| POST | `/api/sachunsung/record` | 사천성 기록 저장 | 로그인 필수 |
 | GET | `/api/timestop/ranking` | 타임스탑 랭킹 (상위 5) | 공개 |
 | POST | `/api/timestop/record` | 타임스탑 기록 저장 | 로그인 필수 |
+
+### 아바타 API
+
+| 메서드 | 경로 | 설명 | 권한 |
+|--------|------|------|------|
+| GET | `/api/avatar` | 내 아바타 정보 | 로그인 필수 |
+| GET | `/api/avatar/<username>` | 특정 사용자 아바타 | 공개 |
+| POST | `/api/avatar/stat` | 스탯 포인트 분배 | 로그인 필수 |
+
+### 랭킹 API
+
+| 메서드 | 경로 | 설명 | 권한 |
+|--------|------|------|------|
+| GET | `/api/ranking/authors` | 전체 사용자 레벨 랭킹 | 공개 |
 
 ### 헬스 체크
 
@@ -353,6 +402,24 @@ function escapeHtml(s) {
 - 목표: 10.00초 정확히 정지
 - **10.00초 정확 (±0.01초)**: 특별 메시지 표시
 - **랭킹 기준**: 10.00초와의 거리가 가까운 순 (상위 5명)
+
+### 사천성
+
+- 동일한 모양의 패를 연결하여 제거하는 게임
+- **규정**: 최대 2번까지 꺾이는 경로로 연결 가능
+- **단계**: 1단계 ~ 5단계
+- **보상**: 단계별 경험치 지급 (단계 * 30 EXP)
+- **랭킹 기준**: 높은 단계 → 짧은 클러어 타임 (상위 5명)
+
+### 아바타 RPG 시스템
+
+- **경험치 획득**: 게시글 작성(+10), 게임 클리어(지뢰찾기, 타임스탑, 사천성) 시 획득
+- **레벨업**: 100 * 현재 레벨만큼의 경험치 필요, 만렙 99
+- **스탯 포인트**: 레벨업 당 1점 부여
+- **스탯 종류**:
+  - STR: 신체 능력
+  - CON: 체력 (HP = CON * 10)
+  - DEX: 민첩성
 
 ---
 
@@ -445,11 +512,13 @@ python app.py
 | 함수 | 줄 번호 | 설명 |
 |------|---------|------|
 | `_fmt_dt()` | ~34 | UTC → KST 변환 (YYYY-MM-DD HH:mm:ss) |
-| `_fmt_date_yyyymmdd()` | ~46 | UTC → KST 변환 (YYYYMMDD) |
-| `inject_user()` | ~48 | 템플릿에 사용자 정보 주입 |
-| `_admin_required()` | ~56 | 관리자 권한 데코레이터 |
-| `_require_login()` | ~73 | 로그인 필수 미들웨어 |
-| `_create_post()` | ~412 | 게시글 작성 |
-| `_get_password_hash()` | ~476 | 게시글 비밀번호 해시 조회 |
-| `_update_post()` | ~484 | 게시글 수정 |
-| `_delete_post()` | ~518 | 게시글 삭제 |
+| `_fmt_date_yyyymmdd()` | ~454 | UTC → KST 변환 (YYYYMMDD) |
+| `inject_user()` | ~114 | 템플릿에 사용자 정보 주입 (세션 아바타 정보 포함) |
+| `_admin_required()` | ~128 | 관리자 권한 데코레이터 |
+| `_require_login()` | ~145 | 로그인 필수 미들웨어 |
+| `_get_avatar()` | ~53 | 아바타 정보 조회 (없으면 기본값) |
+| `_award_exp()` | ~68 | 경험치 지급 및 레벨업 처리 |
+| `_create_post()` | ~749 | 게시글 작성 및 경험치(10) 지급 |
+| `_get_password_hash()` | ~824 | 게시글 비밀번호 해시 조회 |
+| `_update_post()` | ~832 | 게시글 수정 |
+| `_delete_post()` | ~866 | 게시글 삭제 |
