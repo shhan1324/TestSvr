@@ -30,7 +30,7 @@
 | 데이터베이스 | Supabase (PostgreSQL) |
 | 배포 플랫폼 | Render (render.yaml) |
 | 실행 포트 | 5001 (기본값) |
-| 주요 기능 | 게시판, 회원관리, 지뢰찾기, 사천성, 타임스탑, 아바타 RPG |
+| 주요 기능 | 게시판, 회원관리, 지뢰찾기, 사천성, 타임스탑, 아바타 RPG, 방치형 어드벤처 |
 
 ---
 
@@ -56,6 +56,7 @@ C:\project\TestSvr
 │   ├── minesweeper.html        # 지뢰찾기 게임
 │   ├── sachunsung.html         # 사천성 게임
 │   ├── timestop.html           # 타임스탑 게임
+│   ├── idle.html               # 방치형 게임 메인
 │   └── avatar.html             # 아바타 정보 및 스탯
 └── static/
     ├── css/
@@ -64,7 +65,8 @@ C:\project\TestSvr
     └── js/
         ├── minesweeper.js      # 지뢰찾기 게임 로직 (~500줄)
         ├── sachunsung.js       # 사천성 게임 로직 (~700줄)
-        └── timestop.js         # 타임스탑 게임 로직 (~100줄)
+        ├── timestop.js         # 타임스탑 게임 로직 (~100줄)
+        └── idle.js             # 방치형 게임 클라이언트 로직
 ```
 
 ---
@@ -236,6 +238,7 @@ users (1) ──── (N) timestop_records
 | GET | `/minesweeper` | 지뢰찾기 게임 | 로그인 필수 |
 | GET | `/sachunsung` | 사천성 게임 | 로그인 필수 |
 | GET | `/timestop` | 타임스탑 게임 | 로그인 필수 |
+| GET | `/idle` | 방치형 게임 메인 | 로그인 필수 |
 | GET | `/avatar` | 내 아바타 정보 | 로그인 필수 |
 | GET | `/login` | 로그인 페이지 | 비로그인만 |
 | GET | `/register` | 회원가입 페이지 | 비로그인만 |
@@ -303,6 +306,14 @@ users (1) ──── (N) timestop_records
 | POST | `/api/sachunsung/record` | 사천성 기록 저장 | 로그인 필수 |
 | GET | `/api/timestop/ranking` | 타임스탑 랭킹 (상위 5) | 공개 |
 | POST | `/api/timestop/record` | 타임스탑 기록 저장 | 로그인 필수 |
+
+### 방치형 게임 API
+
+| 메서드 | 경로 | 설명 | 권한 |
+|--------|------|------|------|
+| GET | `/api/idle` | 현재 상태 및 보상 정보 | 로그인 필수 |
+| POST | `/api/idle/claim` | 누적 경험치 수령 | 로그인 필수 |
+| POST | `/api/idle/battle` | 보스 전투 도전 | 로그인 필수 |
 
 ### 아바타 API
 
@@ -420,6 +431,13 @@ function escapeHtml(s) {
   - STR: 신체 능력
   - CON: 체력 (HP = CON * 10)
   - DEX: 민첩성
+
+### 방치형 어드벤처
+
+- **진행 방식**: 시간에 따라 경험치가 자동으로 누적됩니다.
+- **보상 공식**: `시간당 Stage * 50 EXP`
+- **보스 전투**: 상위 스테이지로 이동하기 위해 보스에게 도전합니다.
+- **전투 요인**: 나의 체력(HP), 공격력(STR), 명중력(DEX)이 보스의 능력치보다 높을수록 승률이 상승합니다.
 
 ---
 

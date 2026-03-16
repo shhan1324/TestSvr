@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}방치형 게임 - TestSvr{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden mb-4 bg-dark text-white">
+                <div class="card-header bg-gradient-primary py-3">
+                    <h3 class="mb-0 fs-4 fw-bold"><i class="bi bi-clock-history me-2"></i>방치형 모험</h3>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <div class="mb-4">
+                        <span class="badge bg-primary fs-5 px-3 py-2 rounded-pill">Stage <span id="current-stage">-</span></span>
+                    </div>
+                    
+                    <div class="display-4 fw-bold mb-2 text-warning" id="pending-exp">0</div>
+                    <p class="text-secondary mb-4">현재 누적된 경험치</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button id="btn-claim" class="btn btn-primary btn-lg rounded-pill fw-bold py-3 shadow">
+                            <i class="bi bi-gift me-2"></i>경험치 수령하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-dark text-white">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 border-bottom border-secondary pb-2">
+                                <i class="bi bi-person-badge me-2 text-info"></i>나의 능력치
+                            </h5>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>체력 (HP)</span>
+                                <span class="fw-bold text-success" id="user-hp">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>공격력 (STR)</span>
+                                <span class="fw-bold text-danger" id="user-str">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-0">
+                                <span>명중력 (DEX)</span>
+                                <span class="fw-bold text-warning" id="user-dex">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow border-0 rounded-4 h-100 bg-dark text-white">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 border-bottom border-secondary pb-2">
+                                <i class="bi bi-shield-shaded me-2 text-danger"></i>현재 스테이지 보스
+                            </h5>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>보스 체력</span>
+                                <span class="fw-bold text-success" id="boss-hp">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>보스 공격력</span>
+                                <span class="fw-bold text-danger" id="boss-str">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-0">
+                                <span>승리 확률</span>
+                                <span class="fw-bold text-primary" id="win-chance">-%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <button id="btn-battle" class="btn btn-outline-danger btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                    <i class="bi bi-sword me-2"></i>다음 스테이지 도전
+                </button>
+            </div>
+            
+            <div class="mt-4 p-3 bg-light rounded-3 text-dark small shadow-sm">
+                <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-1"></i>방치형 게임 정보</h6>
+                <ul class="mb-0 ps-3">
+                    <li>스테이지가 높아질수록 시간당 획득하는 경험치가 증가합니다. (시간당 Stage * 50 EXP)</li>
+                    <li>보스 도전 시 나의 체력(CON), 공격력(STR), 명중력(DEX)이 높을수록 승리 확률이 증가합니다.</li>
+                    <li>아바타 레벨업 시 부여받은 스탯 포인트를 분배하여 승리 확률을 높여보세요!</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    }
+    .card {
+        transition: transform 0.2s;
+    }
+    #pending-exp {
+        text-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/idle.js') }}"></script>
+{% endblock %}

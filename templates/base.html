@@ -23,6 +23,7 @@
               {{ current_user }}님
             {% endif %}
           </span>
+          <a class="nav-link text-primary fw-bold" href="/idle"><i class="bi bi-clock-history"></i> 방치형</a>
           <a class="nav-link" href="/logout" id="navLogout">로그아웃</a>
           {% if is_admin %}
             <a class="nav-link" href="/admin/members">회원관리</a>

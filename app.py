@@ -108,6 +108,55 @@ def _sync_avatar_session(user_id):
 
 
 # ──────────────────────────────────────────────
+# 방치형 게임 헬퍼
+# ──────────────────────────────────────────────
+
+def _get_idle_progress(user_id):
+    """방치형 진행 상황 조회. 없으면 생성."""
+    res = supabase.table("idle_progress").select("*").eq("user_id", user_id).execute()
+    if not (res.data and len(res.data) > 0):
+        # 없으면 생성
+        supabase.table("idle_progress").insert({"user_id": user_id}).execute()
+        res = supabase.table("idle_progress").select("*").eq("user_id", user_id).execute()
+    return res.data[0]
+
+
+def _get_boss_stats(stage):
+    """스테이지별 보스 능력치 결정"""
+    return {
+        "hp": stage * 100,
+        "str": stage * 10,
+        "dex": stage * 5
+    }
+
+
+def _calculate_win_chance(user_stats, boss_stats):
+    """전투 요인: HP, STR, DEX 기반 승리 확률(0~100) 계산"""
+    # 기본 확률 30%
+    chance = 30
+    
+    # HP 비교 (최대 30%)
+    if user_stats["hp"] >= boss_stats["hp"]:
+        chance += 30
+    else:
+        chance += (user_stats["hp"] / boss_stats["hp"]) * 30
+        
+    # STR 비교 (최대 25%)
+    if user_stats["str"] >= boss_stats["str"]:
+        chance += 25
+    else:
+        chance += (user_stats["str"] / boss_stats["str"]) * 25
+        
+    # DEX 비교 (최대 15%)
+    if user_stats["dex"] >= boss_stats["dex"]:
+        chance += 15
+    else:
+        chance += (user_stats["dex"] / boss_stats["dex"]) * 15
+        
+    return min(95, max(5, round(chance, 1)))
+
+
+# ──────────────────────────────────────────────
 # Context processor
 # ──────────────────────────────────────────────
 
@@ -214,6 +263,11 @@ def admin_members_page():
 @app.route("/avatar", strict_slashes=False)
 def avatar_page():
     return render_template("avatar.html")
+
+
+@app.route("/idle", strict_slashes=False)
+def idle_page():
+    return render_template("idle.html")
 
 
 # ──────────────────────────────────────────────
@@ -641,6 +695,126 @@ def api_timestop_record():
             result["leveled_up"] = award["leveled_up"]
             result["level"] = award["level"]
         return jsonify(result)
+    except Exception as e:
+        return _post_error(e)
+
+
+# ──────────────────────────────────────────────
+# 방치형 게임 API
+# ──────────────────────────────────────────────
+
+@app.route("/api/idle", methods=["GET"], strict_slashes=False)
+def api_idle_status():
+    user_id = session.get("user_id")
+    if not user_id or user_id < 0:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        progress = _get_idle_progress(user_id)
+        stage = progress.get("current_stage", 1)
+        last_claimed = progress.get("last_claimed_at")
+        
+        # 누적 경험치 계산 (시간당 stage * 50)
+        now = datetime.now(timezone.utc)
+        lc_dt = datetime.fromisoformat(last_claimed.replace("Z", "+00:00"))
+        if lc_dt.tzinfo is None:
+            lc_dt = lc_dt.replace(tzinfo=timezone.utc)
+            
+        hours = (now - lc_dt).total_seconds() / 3600
+        pending_exp = math.floor(hours * stage * 50)
+        
+        boss = _get_boss_stats(stage)
+        av = _get_avatar(user_id)
+        user_stats = {
+            "hp": av.get("con", 5) * 10,
+            "str": av.get("str", 5),
+            "dex": av.get("dex", 5)
+        }
+        win_chance = _calculate_win_chance(user_stats, boss)
+        
+        return jsonify({
+            "stage": stage,
+            "pending_exp": pending_exp,
+            "last_claimed_at": last_claimed,
+            "boss": boss,
+            "user_stats": user_stats,
+            "win_chance": win_chance
+        })
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/idle/claim", methods=["POST"], strict_slashes=False)
+def api_idle_claim():
+    user_id = session.get("user_id")
+    if not user_id or user_id < 0:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        progress = _get_idle_progress(user_id)
+        stage = progress.get("current_stage", 1)
+        last_claimed = progress.get("last_claimed_at")
+        
+        now = datetime.now(timezone.utc)
+        lc_dt = datetime.fromisoformat(last_claimed.replace("Z", "+00:00"))
+        if lc_dt.tzinfo is None:
+            lc_dt = lc_dt.replace(tzinfo=timezone.utc)
+            
+        hours = (now - lc_dt).total_seconds() / 3600
+        pending_exp = math.floor(hours * stage * 50)
+        
+        if pending_exp > 0:
+            award = _award_exp(user_id, pending_exp)
+            _sync_avatar_session(user_id)
+            # 수령 시간 갱신
+            supabase.table("idle_progress").update({
+                "last_claimed_at": now.isoformat()
+            }).eq("user_id", user_id).execute()
+            
+            return jsonify({
+                "ok": True,
+                "claimed_exp": pending_exp,
+                "leveled_up": award["leveled_up"],
+                "level": award["level"]
+            })
+        return jsonify({"ok": True, "claimed_exp": 0})
+    except Exception as e:
+        return _post_error(e)
+
+
+@app.route("/api/idle/battle", methods=["POST"], strict_slashes=False)
+def api_idle_battle():
+    user_id = session.get("user_id")
+    if not user_id or user_id < 0:
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+    if not supabase:
+        return _post_error("DB 미설정")
+    try:
+        progress = _get_idle_progress(user_id)
+        stage = progress.get("current_stage", 1)
+        
+        boss = _get_boss_stats(stage)
+        av = _get_avatar(user_id)
+        user_stats = {
+            "hp": av.get("con", 5) * 10,
+            "str": av.get("str", 5),
+            "dex": av.get("dex", 5)
+        }
+        win_chance = _calculate_win_chance(user_stats, boss)
+        
+        import random
+        success = random.random() * 100 <= win_chance
+        
+        if success:
+            new_stage = stage + 1
+            supabase.table("idle_progress").update({
+                "current_stage": new_stage
+            }).eq("user_id", user_id).execute()
+            return jsonify({"ok": True, "success": True, "new_stage": new_stage})
+        else:
+            return jsonify({"ok": True, "success": False, "message": "전투에서 패배했습니다."})
     except Exception as e:
         return _post_error(e)
 
