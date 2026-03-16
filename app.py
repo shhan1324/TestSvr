@@ -1,5 +1,6 @@
 import math
 import os
+from dotenv import load_dotenv
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from flask import Flask, jsonify, request, render_template, session, redirect, url_for
@@ -7,6 +8,7 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client
 from functools import wraps
+load_dotenv()
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
